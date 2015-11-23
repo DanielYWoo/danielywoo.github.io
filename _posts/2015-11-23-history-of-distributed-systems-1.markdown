@@ -2,7 +2,6 @@
 layout: post
 title:  "分布式系统一致性的发展历史 (一)"
 date:   2015-11-23 19:18:45
-categories: jekyll update
 ---
 
 # 前言

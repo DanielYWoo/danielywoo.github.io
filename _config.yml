@@ -9,3 +9,5 @@ github_username:  danielywoo
 
 # Build settings
 markdown: kramdown
+
+permalink: "/:title"

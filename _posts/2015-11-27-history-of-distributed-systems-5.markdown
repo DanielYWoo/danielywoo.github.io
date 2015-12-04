@@ -60,6 +60,9 @@ This is not linearizable.
 
 TODO: http://stackoverflow.com/questions/19209274/example-of-execution-which-is-sequentially-consistent-but-not-quiescently-consis
 
+gossip, SWIM
+
+
 2010年的时候是不是你已经大学毕业了? 我们处于一个高速发展必须不断学习的行业是不是很酷?
 
 

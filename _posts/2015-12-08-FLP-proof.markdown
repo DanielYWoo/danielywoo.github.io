@@ -1,0 +1,69 @@
+---
+layout: post
+title:  "FLP Impossibility的证明"
+date:   2015-12-08 13:12:45
+published: false
+---
+
+作为分布式系统历史中最重要的一个定理之一, FLP是每个做分布式系统的开发人员都应该深刻理解的一个基础.但是FLP的证明过程不是特别容易, 本文通过一些例子来帮助读者理解FLP的证明过程.
+
+# Lemma 1
+> Suppose that from some configuration C, the schedulers 𝞂1, 𝞂2 lead to configurations C1, C2, respectively. If the sets of processes taking steps in 𝞂1 and 𝞂2, respectively, are disjoint, then 𝞂2 can be applied to C1 and 𝞂1 can be applied to C2, and both lead to the same configuration C3.
+
+这条引理表示如果一个C里有两组事件, 每个事件(p, m)分别是在两组没有交互的进程上, 那么先使用任何一组事件再使用另外一组事件在C上, 结果都一样. 下图描述了这样的情况.
+
+<img src="/images/2015-12-08/lemma1.png" max-height="500px">
+
+这个引理太容易理解了, 就不做证明了. 不过我们可以举个例子来描述一下:
+比如Paxos算法中, 假设有A, B, C, D四个节点, 𝞂1是B收到了A的第一阶段消息, 𝞂2是D收到了C的第一阶段消息. 那么消息无论是先𝞂1, 𝞂2的顺序被送达还是按照𝞂2, 𝞂1的顺序, 结果都一样, 因为A/B是一组进程, C/D是一组进程, 𝞂1和𝞂2分别作用于这两组不相交的进程上.
+
+<img src="/images/2015-12-08/lemma1_paxos.png" max-height="500px">
+
+# Lemma 2
+> P has a bivalent initial configuration
+
+任何一个协议P一定会有bivalent初始configuration. 这是由于异步网络的本质造成的. 因为异步网络的消息顺序不一定, 所以对同一个初始configuration都可能会运行产生不同的结果. 证明如下:
+
+反证法, 假设协议P没有bivalent initial configuration, 那么P的initial configuration不是0-valent就是1-valent. 实际上一定是二者都包含的. 因为consensus问题的第三条属性validity要求结果必须是某个结点提议的, 如果某个initial configuration中全体节点都是0, 那么结果一定是0, 不可能全体是0结果是1, 所以P的initial configurations全体为0和全体为1的两种情况必须产生0和1的结果, 也就是说必须同时包含0-valent和1-valent.
+
+我们把所有只差一个进程的p上的xp变量不同的两个configuration叫做相邻(adjacent). 因为同时存在0-valent和1-valent的configurations, 假设是C和C', 那么从C到C'一定有一个路径上, 至少存在一处相邻的C0和C1, 使得C0是0-valent, C1是1-valent. 下图是一个只有三个进程(p0, p1, p2)的所有initial configuration的情况, 线条连接的是相邻的两个configuration.
+
+<img src="/images/2015-12-08/lemma2_adjacent.png" max-height="500px">
+
+假设p是C0和C1之间状态不同的那个进程, 如果p发生了故障不工作了, p不再从buffer里获得任何消息, 那么C0和C1如果排除了p之后其实状态是一样的, 那么排除了p之后C0上的某个事件序列𝞂也可以应用在C1上, 而且结果相同. 因为C0是0-valent的, C1是1-valent的, 他们的结果应该分别是0和1, 这和他们排除p之后结果相同的推论矛盾.
+
+比如上图中的{0,0,0}和{1,1,1}分别是C和C', 那么可能在{0,0,0} - {0,1,0} - {1,1,0} - {1,1,1}这条路径上, {0,1,0}和{1,1,0}就是C0和C1的分界点, 他们之间只差了一个p0的状态不同. 如果p发生故障不从message buffer里收消息, 那么排除掉p, 其实C0和C1都是{1,0}的状态了. 而C0和C1在没有p的情况下必然结果一样, 这和C0/C1分别是0-valent/1-valent矛盾.
+
+这个引理的本质是:一个故障节点停止接受消息, 会使结果不确定. 举个例子, 我们设计一个consensus算法, 规则如下: 有A/B/C三个节点, A作为leader对B/C做类似于两阶段提交的询问, A先告诉B/C期望的结果, B/C接受并返回应答, 只有收到应答之后A才能做出决定并发出第二个请求给B/C做提交, 如果A发生了故障, 那么B作为leader对C询问. 那么我们设计一个0-valent的C0和一个1-valent的C1分别如下:
+
+C0=A建议0给B/C. B/C自己都倾向于1.
+
+C1=A建议1给B/C. B/C自己都倾向于1.
+
+明显, 如果没有任何故障, C0结果是0, C1结果是1. 因为C0和C1只差一个进程A不同, 假设A进程挂了, 那么C0'和C1'其实是一样的, 这时候他们俩结果应该是一致的, 应该都是1. 但是这和C0就算有一个故障节点也应该结果为0矛盾.
+
+<img src="/images/2015-12-08/lemma2_sample.png" max-height="500px">
+
+我们通过反证法证明了一个协议P必然包含bivalent initial configuraiton. 本质上这是异步网络中一个没有响应的节点导致的结果不确定性.
+
+# Lemma 3
+
+Let C be a bivalent configuration of P, and let e=(p, m) be an event that is applicable to C. Let Ɛ be the set of configurations reachable from C without applying e, and let Ɗ = e(Ɛ) = {e(E) when E∈Ɛ and e is applicable to E}. Then, Ɗ contains a bivalent configuration.
+
+这是整个证明的核心部分, 这部分比较难理解.
+
+
+ 𝝳𝝵
+
+
+𝞂 𝝳𝝵
+
+Ɛ
+Ɗ
+
+∈
+
+∉
+
+
+

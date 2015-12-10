@@ -28,11 +28,13 @@ Consensus protocol定义: 异步网络中的N个进程(N不小于2), 每个进�
 1. send(p, m): 把一个消息(p, m)放到message buffer中.
 2. receive(p): p从message buffer删除并取得消息值m, 或者返回null. 前者表示消息被接收到, 如果message buffer为空后者表示没有p的消息, 如果message buffer不为空表示p的消息传输被延迟. 注意, p的消息被延迟的次数有上限, 任何消息最终都会被收到.
 
-一个configuration(状态)就是指所有进程的内部状态和message buffer状态. 整个系统总是从一个configuration变化为另外一个configuration. 这个变化过程叫做step, 一个step取决于message buffer返回消息的情况, 因为receive(p)返回的是M还是null, 而transition function是deterministic的, 所以下一个configuration取决于message buffer的返回值. 这个消息被接受处理的过程叫做event(p, m), 消息被延迟的事件叫做event(p, null). 这些steps叫做一个run, 如果结果的configuration有任何一个进程的yp={0,1}那么着叫做一个deciding run, 这个configuration已经有了表决结果. 因为只要有一个进程能够进入decision state那么整个configuration就算是
+一个configuration(状态)就是指所有进程的内部状态和message buffer状态. 整个系统总是从一个configuration变化为另外一个configuration. 这个变化过程叫做step, 一个step取决于message buffer返回消息的情况, 因为receive(p)返回的是M还是null, 而transition function是deterministic的, 所以下一个configuration取决于message buffer的返回值. 这个消息被接受处理的过程叫做event(p, m), 消息被延迟的事件叫做event(p, null). 这些steps叫做一个run, 如果结果的configuration有任何一个进程的yp={0,1}那么着叫做一个deciding run, 这个configuration已经有了表决结果. 因为只要有一个进程能够进入decision state那么整个configuration就算是0-valent或者1-valent了.
 
 <img src="/images/2015-10-28/model.png" max-height="500px">
 
-一个configuration的一个schedule(事件序列)记作𝞂, 它包含了从这个configuration起, 一系列的
+一个configuration的一个schedule(事件序列)记作𝞂, 它包含了从这个configuration起, 一系列的事件. 比如(p1, m1), (p2, m2), (p3, m3)....
+
+一个configuration如果无论后继的事件如何都会进入选择0的状态, 这叫做0-valent. 如果总是会进入选择1的状态, 这叫做1-valent. 如果两种情况都可能发生, 那么叫做bi-valent.
 
 
 # Lemma 1

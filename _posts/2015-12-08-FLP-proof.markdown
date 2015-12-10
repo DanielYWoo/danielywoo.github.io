@@ -2,10 +2,38 @@
 layout: post
 title:  "FLP Impossibility的证明"
 date:   2015-12-08 13:12:45
-published: false
+published: true
 ---
 
 作为分布式系统历史中最重要的一个定理之一, FLP是每个做分布式系统的开发人员都应该深刻理解的一个基础.但是FLP的证明过程不是特别容易, 本文通过一些例子来帮助读者理解FLP的证明过程.
+
+# Model
+
+Consensus定义:
+
+1. termination: 所有进程最终会在有限步数中结束并选取一个值, 算法不会无尽执行下去.
+2. agreement: 所有进程必须同意同一个值.
+3. validity: 最终达成一致的值必须是V1到Vn其中一个, 如果所有初始值都是vx, 那么最终结果也必须是vx.
+
+这里我们对于第二个条件, 我们弱化为只要有一个进程做出了决定即可.
+
+首先, 排除Byzantine式故障. 消息系统是异步的, 但是任何消息都会被接收一次且仅一次, 并且无法伪造或者丢失. 这是比一般的异步网络更加可靠的一个网络模型. 这样收窄的一个模型如果不能有一个完全正确的consensus protocol, 那么一般的异步网络或者包含Byzantine故障的模型更不可能有正确的protocol. 这是完全正确(totally correct)是指同时满足safety和liveness. 在实际应用中, Paxos, Raft, PBFT都是保证safety但是不保证liveness的, 所以他们都不是完全正确的算法, 理论上存在进入无限循环的可能性(实际上概率非常低, 在工程中完全可以使用).
+
+关于异步网络和故障模型, 请参考<a href="http://danielw.cn/network-failure-models/">http://danielw.cn/network-failure-models/</a>.
+
+Consensus protocol定义: 异步网络中的N个进程(N不小于2), 每个进程都有一个输入xp和输出yp的寄存器, 每个p的输入xp取值为{0, 1}其中一个, 这叫做一个进程的初始状态. 每个进程的表决结果输出到寄存器yp里, yp的取值范围为{b, 0, 1}, 其中初始状态必须为b, 一旦产生表决结果则变成0或者1, 这时候这个进程的状态叫做decision state, 一旦进入decision state, yp就不可以再变化. 每次内部状态的变化过程叫做transistion function, 他是deterministic的. 因为表决值只能是b(未决定), 0, 和1, 所以这是一个比较简化的模型. 这个protocol记作P.
+
+进程之间通过消息通信, 一个消息e = (p, m). 其中p是目标进程, m是消息值. 整个消息系统叫做message buffer, 相当于一个multiset(每个进程拥有自己的消息队列, 如同erlang信箱一样). message buffer里包含着已经发出但是还没有收到的消息. message buffer支持两个操作:
+
+1. send(p, m): 把一个消息(p, m)放到message buffer中.
+2. receive(p): p从message buffer删除并取得消息值m, 或者返回null. 前者表示消息被接收到, 如果message buffer为空后者表示没有p的消息, 如果message buffer不为空表示p的消息传输被延迟. 注意, p的消息被延迟的次数有上限, 任何消息最终都会被收到.
+
+一个configuration(状态)就是指所有进程的内部状态和message buffer状态. 整个系统总是从一个configuration变化为另外一个configuration. 这个变化过程叫做step, 一个step取决于message buffer返回消息的情况, 因为receive(p)返回的是M还是null, 而transition function是deterministic的, 所以下一个configuration取决于message buffer的返回值. 这个消息被接受处理的过程叫做event(p, m), 消息被延迟的事件叫做event(p, null). 这些steps叫做一个run, 如果结果的configuration有任何一个进程的yp={0,1}那么着叫做一个deciding run, 这个configuration已经有了表决结果. 因为只要有一个进程能够进入decision state那么整个configuration就算是
+
+<img src="/images/2015-12-08/model.png" max-height="500px">
+
+一个configuration的一个schedule(事件序列)记作𝞂, 它包含了从这个configuration起, 一系列的
+
 
 # Lemma 1
 > Suppose that from some configuration C, the schedulers 𝞂1, 𝞂2 lead to configurations C1, C2, respectively. If the sets of processes taking steps in 𝞂1 and 𝞂2, respectively, are disjoint, then 𝞂2 can be applied to C1 and 𝞂1 can be applied to C2, and both lead to the same configuration C3.
@@ -51,19 +79,45 @@ C1=A建议1给B/C. B/C自己都倾向于1.
 Let C be a bivalent configuration of P, and let e=(p, m) be an event that is applicable to C. Let Ɛ be the set of configurations reachable from C without applying e, and let Ɗ = e(Ɛ) = {e(E) when E∈Ɛ and e is applicable to E}. Then, Ɗ contains a bivalent configuration.
 
 这是整个证明的核心部分, 这部分比较难理解.
+首先C不是initial configuration了, C可能是某个中间过程的configuration, 然后C是bivalent的. 假设e=(p, m)这个消息是可以应用于C的, 那么不用e所能达到的所有configuration应该是一幅图. 这个图就是Ɛ. Ɛ内任何一个configuration再用e就跳出Ɛ, 并得到了一个集合Ɗ. 每一个'Ɛ边界'上的configuration就是E, 因而有D=e(E).
 
+如果把e用于Ɛ中某一个configuration, 那么相当于Ɛ中离起始的C越远的configuration收到e越晚, e越被延迟. 由于我们定义了Ɛ不含e, 所以e只会发生在Ɛ的边界上, 实际上就是把e延迟成为离开Ɛ进入Ɗ的最后一个消息. e会把Ɛ内每一个configuration映射到Ɗ 中一个configuration.
 
- 𝝳𝝵
+我们要证明Ɗ包含bivalent configuration, 我们反证它. 假设D没有bivalent configuration, 那么Ɗ只能包含0-valent和1-valent. 也就是说e回把Ɛ中每一个边界的configuration变为(映射为)Ɗ 中的一个0-valent或者1-valent configuration. 按照这个思路, 因为C是bivalent, 所以一定会同时存在E0和E1分别是0-valent和1-valent. 接下来分两种情况分析:
 
+如果E0还没有收到e, 那么E0属于Ɛ, 那么E0收到e之后会变成F0. F0明显是0-valent并且属于Ɗ. 同样, 如果E1还没有收到e, 也会有F1属于Ɗ.
 
-𝞂 𝝳𝝵
+如果E0已经收到过e, 那么E0不属于Ɛ, 由于e是最后一个消息, 所以必然存在于Ɛ边界上一个configuration收到e之后变成F0进入Ɗ, 然后F0可能经过收到其他消息最终变成E0. 根据反证假设, F0必须是0-valent. 类似的, 如果E1还没有收到e, 也会有F1属于Ɗ, 并且F1可以变成E1.
 
-Ɛ
-Ɗ
+这两种情况下总是有一个E和F可以通过一个消息变成对方. 因为C是bivalent, 所以一定同时存在E0/E1, 那也就同时存在F0/F1. 所以由反证假设可以得出结论: Ɗ总是同时包含0-valent和1-valent.
 
-∈
+<img src="/images/2015-12-08/lemma3_sample.png" max-height="500px">
 
-∉
+那么我们按照这个假设, 我们从Ɛ中找两个configuration, C0和C1, 使得C0通过消息e'= (p', m')得到C1(此处C0和C1不表示他们是0-valent和1-valent, 0/1下标只是为了容易区分). 那么e能够把C0变成D0状态, e也可以把C1变成D1状态, 其中D0/D1是属于Ɗ 的0-valent和1-valent. 如下图所示:
 
+<img src="/images/2015-12-08/lemma3_sample_2a.png" max-height="500px">
 
+接下来我们又要分两种情况讨论. 第一种比较简单, 如果e'和e所接受消息的p'和p不同, 那么从C0开始, e'和e所作用的进程是离散不相交的, 根据lemma 1, C0上用了e再用e'和先用e'再用e的结果应该是一样的. 根据lemma 1, 我们把这个图稍微旋转一下, 会看到这样一幅图.
 
+<img src="/images/2015-12-08/lemma3_sample_2b.png" max-height="500px">
+
+红色是根据lemma 1加上去的, 但是这条红色的会把一个0-valent的D0变成1-valent的D1, 这是明显矛盾不可能的. 所以第一种情况不存在.
+
+再看第二种情况, 假设p'和p相同. 这种情况更复杂一点. 任何一个从C0开始不含p的消息(p不工作)的有限步数的deciding run会得到一个0-valent或者1-valent的configuration A, 我们把这个deciding run的事件序列标记为𝞂. 因为𝞂不含p的事件, 所以它和e作用的进程不相交, 那么用lemma 1可以得出下图中的E0. 同理, e'和e都作用于p, 所以e'和e的事件序列和𝞂作用的进程也不想交, 根据lemma 1可以得到E1.
+
+<img src="/images/2015-12-08/lemma3_sample_2c.png" max-height="500px">
+
+那么我们可以看出A可以变成E0也可以变成E1, 这说明A是bivalent的. 但是这和A是一个deciding run的结果矛盾. (A要么0-valent要么1-valent).
+
+至此p=p'和p!=p'的两种情况在我们的反证假设下都矛盾, 因此反证假设错误. Lemma 3 证明完成, 即: Ɗ 一定包含bivalent configuration.
+
+三个Lemma都证明结束后, 我们来推导最终FLP定理.
+
+# FLP Theorem
+> No Consensus protocol is totally correct in spite of one fault.
+
+根据Lemma 2, P一定含有bivalent initial configuration, 那么任何从这个bivalent状态进入univalent的deciding run, 其中必然存在一个从bivalent到univalent的关键步骤, 这个步骤决定了最终结果. 我们接下来就是要证明系统中总是有可能会把这个步骤无限推迟下去.
+
+我们设计一个队列, 把所有进程放到这个队列中, 按照FIFO的顺序每次一个进程出来, 这个进程从message buffer取出第一个此进程的消息, 把计算后发给其他进程的消息放回message buffer尾部, 然后进程自己回到队列尾部等待下一轮调度. 这个模型保证了每个进程总是有机会获得发送给他的消息. 根据Lemma 2我们知道y一定会存在一个bivalent的configuration C0, 从C0开始执行到某一个bivalent的C, 这时候message buffer中第一个C的消息是e. 再根据Lemma 3我们知道如果把e挪到message buffer后面延迟这个消息的送达, 那么C一定会产生一个bivalent configuration C'进入Ɗ.
+
+这是一个非常精妙的证明.

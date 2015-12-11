@@ -9,9 +9,9 @@ published: false
 
 # Causal Consistency 1993
 
-至此, 我们已经回顾了这些比较严格的一致性模型, 实际在应用中, 除了一些关键事件需要SC或者Linearizability之外, 大多数情况下我们是不需要这么严格的一致性的, 因为全局的偏序关系会很大程度的影响并发. 你想想, 为什么所有事件都一定要有线性历史? 实际上大多数事件之间没有任何因果关系的, 我干嘛要关心他们的顺序, 我只要关注有因果关系的事件其实就足够了. 计算机科学家也当然会问同样的问题. 这个因果关系叫做”causally related”, 与之对应的一致性模型叫做”Causal Consistency”, 是1993年由乔治亚理工学院的一批科学家提出的[Causal Memory: Definitions, Implementation and Programming, GIT-CC-93/55], 但是它的核心思想已经在更早的Vector Clock中已经体现了.
+至此, 我们已经回顾了这些比较严格的一致性模型, 实际在应用中, 除了一些关键事件需要SC或者Linearizability之外, 大多数情况下我们是不需要这么严格的一致性的, 因为全局的偏序关系会很大程度的影响并发. 你想想, 为什么所有事件都一定要有线性历史? 实际上大多数事件之间没有任何因果关系的, 我干嘛要关心他们的顺序, 我只要关注有因果关系的事件其实就足够了. 计算机科学家也当然会问同样的问题. 这个因果关系叫做”causally related”, 与之对应的一致性模型叫做”Causal Consistency”, 是1993年由乔治亚理工学院的一批科学家提出的[Causal Memory: Definitions, Implementation and Programming, GIT-CC-93/55], 但是它的核心思想已经在更早的Leslie Lamport的那篇著名论文"Time, clocks, and the ordering of events in a distributed system"中已经描述过了, 可以说Causal Consistency和Sequential Consistency都和他有非常大都关系. 之后其他人更加系统的定义了causal consistency.
 
-在一个分布式系统中, Causal Consistency就是”reads respect the order of causally related writes”. 这个定义的关键在于什么是causally related, 两个读写操作之间怎样才算是有潜在的因果关系. 这其实要追溯到更早的一篇论文 [Lightweight Causal and Atomic Group Multicast, ACM Transactions on Computer Systems, Vol. 9, No. 3, August 1991]. 三位作者在开发ISIS分布式系统的时候实现的causally ordered message 广播系统CBCAST, 来实现了四种常见的分布式系统消息广播模型. 我们这里不具体到这四种模型, 但是我们通过介绍CBCAST协议的基础 – Vector Clock, 来阐述什么是causally related.
+在一个分布式系统中, Causal Consistency就是”reads respect the order of causally related writes”. 这个定义的关键在于什么是causally related, 两个读写操作之间怎样才算是有潜在的因果关系. Leslie Lamport的Lamport Clock是最早解决Causal Consistency的方法, 而后来出现的Vector Clock是应用最为广泛的一个算法. 这要追溯到1991年的一篇论文 [Lightweight Causal and Atomic Group Multicast, ACM Transactions on Computer Systems, Vol. 9, No. 3, August 1991]. 三位作者在开发ISIS分布式系统的时候实现的causally ordered message 广播系统CBCAST, 来实现了四种常见的分布式系统消息广播模型. 我们这里不具体到这四种模型, 但是我们通过介绍CBCAST协议的基础 – Vector Clock, 来阐述什么是causally related.
 
 他们的协议如何辨别causally related messages呢? 严格的数学定义比较晦涩, 但是我们可以通过Colin Fidge和Friedemann Mattern两人独立发现的Vector Clock来解释.
 

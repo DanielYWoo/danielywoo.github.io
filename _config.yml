@@ -1,10 +1,10 @@
 # Site settings
-title: Daniel | Coder
+title: Daniel | Enjoy Coding
 email: daniel.y.woo@gmail.com
 description: This is a tech blog of Daniel Wu
 baseurl: "" # the subpath of your site, e.g. /blog/
 url: "http://danielw.cn" # the base hostname & protocol for your site
-#twitter_username: 
+#twitter_username:
 github_username:  danielywoo
 
 # Build settings

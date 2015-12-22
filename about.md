@@ -4,4 +4,4 @@ title: About
 permalink: /about/
 ---
 
-Linkedin profile: https://cn.linkedin.com/in/danielwu2
+Linkedin profile: <a href="https://cn.linkedin.com/in/danielwu2">Daniel Wu</a>

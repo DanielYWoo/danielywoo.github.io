@@ -12,7 +12,7 @@ published: true
 # 分布式系统中的网络模型
 
 1. 同步网络(synchronous network): 这里的同步网络和编程中的同步阻塞io和异步非阻塞io是两回事, 不要弄混了. 同步网络是指i). 所有节点的时钟漂移有上限, ii). 网络的传输时间有上限, iii). 所有节点的计算速度一样. 这意味着整个网络按照round运行, 每个round中任何节点都要执行完本地计算并且可以完成一个任意大小消息的传输. 一个发出的消息如果在一个round内没有到达, 那么一定是网络中断造成的, 这个消息会丢失, 不会延迟到第二个round到达. 在现实生活中这种网络比较少, 尽管很少, 同步网络仍然是在计算机科学中是不可缺少的一个模型, 在这种模型下可以解决一些问题, 比如拜占庭式故障. 但我们每天打交道的网络大多都是异步网络.
-2. 异步网络(asynchornous network): 和同步网络相反, 节点的时钟漂移无上限, 消息的传输延迟无上限, 节点计算的速度不可预料. 这就是和我们每天打交道的网络类型. 在异步网络中, 有些故障非常难解决, 比如当你发给一个节点一个消息之后几秒钟都没有收到他的应答, 有可能这个节点计算非常慢, 但是也可能是节点crash或者网络延迟造成的, 你很难判断到底是发生了什么样的故障. 
+2. 异步网络(asynchornous network): 和同步网络相反, 节点的时钟漂移无上限, 消息的传输延迟无上限, 节点计算的速度不可预料. 这就是和我们每天打交道的网络类型. 在异步网络中, 有些故障非常难解决, 比如当你发给一个节点一个消息之后几秒钟都没有收到他的应答, 有可能这个节点计算非常慢, 但是也可能是节点crash或者网络延迟造成的, 你很难判断到底是发生了什么样的故障.
 
 # fault, error and failure
 这不是绕口令, 你一定要区分他们的关系. 过去很多时候这些词汇混用导致很多问题, 后来统一了这几个词的定义:
@@ -30,7 +30,7 @@ Failure: 如果一个系统的error没能在错误状态传递给其它节点之
 3. omission failures: 比crash-recovery多了一个限制, 就是一定要非健忘. 有些算法要求必须是非健忘的. 比如最基本版本的Paxos要求节点必须把ballot number记录到持久存储中, 一旦crash, 修复之后必须继续记住之前的ballot number.
 4. crash-stop failures: 也叫做crash failure或者fail-stop failures, 它比omission failure多了一个故障发生后要停止响应的要求. 比如一个节点出现故障后立即停止接受和发送所有消息, 或者网络发生了故障无法进行任何通信, 并且这些故障不会恢复. 简单讲, 一旦发生故障, 这个节点 就不会再和其它节点有任何交互. 就像他的名字描述的那样, crash and stop.
 
-分布式系统中的故障类型还有其他的分类方法, 有些分类会把omission去掉, 有些会加入performance failures, 此处介绍的是使用较为广泛的一种分类方法. 
+分布式系统中的故障类型还有其他的分类方法, 有些分类会把omission去掉, 有些会加入performance failures, 此处介绍的是使用较为广泛的一种分类方法.
 
 他们的关系如下:
 <img src="/images/2015-10-05/failures.png" max-height="500px">
@@ -41,7 +41,7 @@ Failure: 如果一个系统的error没能在错误状态传递给其它节点之
 
 之所以要介绍Consensus问题是因为Consensus问题是分布式系统中最基础最重要的问题之一, 也是应用最为广泛的问题, 他比其他的分布式系统的经典问题比如self-stabilization的实际应用要多, 我们可以通过介绍Consensus问题来更加深入得介绍一下之前提到的Linearizability和Sequential Consistency.
 
-Consensus所解决的最重要的典型应用是容错处理(fault tolerannce). 比如在原子广播(Atomic Broadcast)和状态机复制(State Machine Replication)的时候, 我们都要在某一个步骤中让一个系统中所有的节点对一个值达成一致, 这些都可以归纳为Consensus问题. 但是如果系统中存在故障, 我们要忽略掉这些故障节点的噪音让整个系统继续正确运行, 这就是fault tolerance. Consensus问题的难点就在于在异步网络中如何处理容错. 
+Consensus所解决的最重要的典型应用是容错处理(fault tolerannce). 比如在原子广播(Atomic Broadcast)和状态机复制(State Machine Replication)的时候, 我们都要在某一个步骤中让一个系统中所有的节点对一个值达成一致, 这些都可以归纳为Consensus问题. 但是如果系统中存在故障, 我们要忽略掉这些故障节点的噪音让整个系统继续正确运行, 这就是fault tolerance. Consensus问题的难点就在于在异步网络中如何处理容错.
 
 Consensus问题的定义包含了三个方面, 一般的Consensus问题定义为:
 
@@ -53,7 +53,7 @@ Consensus要满足以下三个方面: termination, agreement 和 validity. 这�
 
 在异步网络中, 如果是拜占庭式故障, 那么Paxos和Raft也无法解决这一类问题, 严格讲这是没有办法解决的, 很长一段时间内我们只看到在航天和军事领域通过同步网络解决此类问题. (直到Babara Liskov在2002年提出PBFT我们才可以在放松liveness的情况下解决此类问题, 为此Barbara Liskov获得了图灵奖. 我们可能会在将来的文章中介绍PBFT). 对于一般的应用来说拜占庭故障出现的概率太低而解决的成本实在是太高, 所以我们一般不考虑拜占庭式故障. 我们主要是关注crash-recovery failure的模型下的异步网络. 这种情况下根据FLP理论, 只要有一个故障节点, Paxos/Raft都是有可能进入无限循环而无法结束的, 但是实际上这个概率非常低, 如果放松liveness的要求, 我们认为这种情况下Paxos/Raft是可以解决的. 以下介绍Consensus问题的时候我们都不考虑拜占庭式故障, 我们的故障模型是crash-recovery failures, 网络模型是异步网络.
 
-在同步网络中因为所有节点时间偏移有上限, 所有包的传输延迟也有上限, 节点会在一个round内完成计算并且传输完成, 所以一旦超过一定时间还没有收到返回的消息, 我们就可以确定要么网络中断要么节点已经crash. 但是我们现实当中都是异步网络, 传输延迟是没有固定上限的, 当很长时间一个节点都没有返回消息的时候, 我们不知道是这个节点计算速度太慢, 还是已经crash了. 如果是这个节点计算太慢, 超时之后, 过了一会这个节点又把结果再发回来了, 这就超出crash-stop故障模型的范围了, 这种情况需要用crash recovery的模型来解决. 在异步网络中无法区分crash和包延迟会导致consensus问题非常难解决. 
+在同步网络中因为所有节点时间偏移有上限, 所有包的传输延迟也有上限, 节点会在一个round内完成计算并且传输完成, 所以一旦超过一定时间还没有收到返回的消息, 我们就可以确定要么网络中断要么节点已经crash. 但是我们现实当中都是异步网络, 传输延迟是没有固定上限的, 当很长时间一个节点都没有返回消息的时候, 我们不知道是这个节点计算速度太慢, 还是已经crash了. 如果是这个节点计算太慢, 超时之后, 过了一会这个节点又把结果再发回来了, 这就超出crash-stop故障模型的范围了, 这种情况需要用crash recovery的模型来解决. 在异步网络中无法区分crash和包延迟会导致consensus问题非常难解决.
 
 # 两阶段提交和三阶段提交, Two Generals Paradox, 1975 - 1981
 
@@ -69,7 +69,7 @@ Consensus要满足以下三个方面: termination, agreement 和 validity. 这�
 
 <b>虽然2PC并不能像很多人想象的那样保证事务的一致性</b>, 不考虑超时回滚的情况下它是安全的, 2PC可以保证safety但是不保证liveness. 为了解决这个阻塞问题, 后来又出现了3PC. 2PC的阻塞主要原因是当coordinator和cohorts同时crash的时候, 之前cohorts之间没有沟通过表决的结果, 他们只和coordinator表决过, 表决结果没有保留下来, 就算立即重新启动一个新的coordinator也无法判断刚才事务的状态, 所以他们会进入群龙无首, 进退两难的情况, 如果有一轮协商的过程, 那么即便coordinator挂了, 也可以再启动一个coordinator去询问cohorts上一轮协商的结果并把事务继续下去, 那就能解决阻塞问题了.
 
-三年后出现的3PC [Nonblocking Commit Protocols, Dale Skeen, 1981] 就是在2PC两个阶段之间插入一个阶段增加了一个相互协商的过程, 并引入了超时来防止阻塞. 这个中间阶段让coordinator发现全体写入资源并收到ACK之后, 先发一个prepare commit消息到全体cohorts, 当cohort全体都同意并返回ACK给coordinator之后, coordinator才发commit消息出去让cohorts提交. 
+三年后出现的3PC [Nonblocking Commit Protocols, Dale Skeen, 1981] 就是在2PC两个阶段之间插入一个阶段增加了一个相互协商的过程, 并引入了超时来防止阻塞. 这个中间阶段让coordinator发现全体写入资源并收到ACK之后, 先发一个prepare commit消息到全体cohorts, 当cohort全体都同意并返回ACK给coordinator之后, coordinator才发commit消息出去让cohorts提交.
 
 如果prepare commit发出给A之后, coordinator和A都挂了, 如果立刻重新启动一个新的coordinator, 那么它发现B没有收到过prepare commit, 这个coordinator就可以发消息给所有cohorts去取消提交. B会回滚, 当A恢复回来之后可以去问coordinator或者任何一个cohort都会知道事务已经回滚. 这样整个事务就回滚了, 因为表决结果通过prepare commit消息可以保留在所有cohorts节点上, 这个情况是2PC无法解决的.
 
@@ -83,15 +83,15 @@ Consensus要满足以下三个方面: termination, agreement 和 validity. 这�
 
 Two Generals Paradox在1975年被提出[Some Constraints and Trade-offs in the Design of Network Communications], 但是广为人知还是靠分布式事务的专家Jim Gray在1978年的一篇文章[Notes on Database Operating Systems]中再次提及这个问题(估计是因为Jim Gray名气太大). 问题描述的是有两个将军A和B分别处于敌军的东侧和西侧, 他们决定互相派信使, 好商量一个时间来同时发起攻击, 如果这个时间没有商量好, 一方先攻击了, 那么就会战败. 但是问题来了, 假设将军里没有叛徒(没有故障节点发出faulty message), 信使如果被中间的敌人抓住了, 会被直接被处死(会有丢包, 但是不会被篡改消息), 那么这两个将军能达成一致么? 好了, 看出来了吧, 这就是一个最简单的consensus问题. 这其实是一个弱化版本的拜占庭将军问题.
 
-如果A送了一个信使m1去B商量一个进攻时间, B收到之后必须要这个信使回去告诉A自己收到消息了, 这是一个ACK应答消息, 没有ACK显然双方是无法达成确认一致的. 可是如果信使m1回去路上被抓住了, 被杀了. A这个时候等了半天没人回来, 他就会进入两难的境地, 到底是信使m1是去的路上被杀了, 还是回来的路上被杀了呢? 前者是B没有收到消息, A就不能在指定时间发起进攻, 后者是B已经收到了消息, A就必须要进攻. 实际上, 就算A收到了信使m1带回的B的ACK消息, 虽然A放心了, 但是B也不能放心. 因为B送走m1之后, B并不知道他的ACK有没有回到A那里, 如果回到A那里了, B认为自己可以发动攻击, 但是万一信使m1回去路上被杀了, A没有收到ACK, B岂不是会自己贸然发动进攻了? 怎么办? 
+如果A送了一个信使m1去B商量一个进攻时间, B收到之后必须要这个信使回去告诉A自己收到消息了, 这是一个ACK应答消息, 没有ACK显然双方是无法达成确认一致的. 可是如果信使m1回去路上被抓住了, 被杀了. A这个时候等了半天没人回来, 他就会进入两难的境地, 到底是信使m1是去的路上被杀了, 还是回来的路上被杀了呢? 前者是B没有收到消息, A就不能在指定时间发起进攻, 后者是B已经收到了消息, A就必须要进攻. 实际上, 就算A收到了信使m1带回的B的ACK消息, 虽然A放心了, 但是B也不能放心. 因为B送走m1之后, B并不知道他的ACK有没有回到A那里, 如果回到A那里了, B认为自己可以发动攻击, 但是万一信使m1回去路上被杀了, A没有收到ACK, B岂不是会自己贸然发动进攻了? 怎么办?
 
-有人说了, 让B交代信使m1, 你回去如果见到A了, 让他再送个信使m2过来告诉我一声, 我才放心. 信使m1回去了, 见到了A, A听了之后想了想, 说有道理, 然后又派了m2去B那里告诉B他收到B的ACK了, 读者看出来没, 这其实是第二个ACK, 这个ACK同样存在不确定因素, 和第一个m1附带的消息所面临的问题是一样的, 按照这个思路两个将军将会进入一个无限循环, 再去发ACK3, ACK4, 但是却无法解决问题. 根源就在于信使其实是一个异步网络, 而且会发生网络分区, 会有延迟和丢包. 
+有人说了, 让B交代信使m1, 你回去如果见到A了, 让他再送个信使m2过来告诉我一声, 我才放心. 信使m1回去了, 见到了A, A听了之后想了想, 说有道理, 然后又派了m2去B那里告诉B他收到B的ACK了, 读者看出来没, 这其实是第二个ACK, 这个ACK同样存在不确定因素, 和第一个m1附带的消息所面临的问题是一样的, 按照这个思路两个将军将会进入一个无限循环, 再去发ACK3, ACK4, 但是却无法解决问题. 根源就在于信使其实是一个异步网络, 而且会发生网络分区, 会有延迟和丢包.
 
 这个问题告诉我们在一个异步不可靠的网络内想用简单的消息应答方式解决consensus问题是不可能的.
 
 现在再回来解释3PC在网络分区下的不一致问题就容易了.假设coordinator第一轮发出了事务请求给所有cohorts, 结果所有cohort都锁定资源并写入成功, 而且都返回了同意应答. 第二轮的时候coordinator给所有cohorts都发出了prepare commit, 并收到了所有的ACK, 到了第三轮, 如果碰巧发生了网络分区, coordinator被隔离开, 无法和任何cohorts通讯, 超时之后, coordinator还没法把commit发出去, 它会认为cohort写入失败或者挂了, coordinator只能发出rollback请求给所有cohorts, 与此同时, 网络分区的另外一边cohorts那边发现coordinator联系不上了, 不给我们发commit了, 也超时了, 他们会选一个新的coordinator, 这个新的coordinator询问了所有节点发现都已经写入了并且表决同意过了, 那么这个新coordinator会发出commit.
 
-碰巧这时候网络分区恢复了, 老的coordinator发出的rollback和新的coordinator发出的commit将会交错混杂在一起通过网络发给所有的cohorts. 结果将是一片混乱和不确定. 3PC虽然是非阻塞的, 但是他的超高延迟和缺乏网络分区的忍耐性让它的实际应用大打折扣. 
+碰巧这时候网络分区恢复了, 老的coordinator发出的rollback和新的coordinator发出的commit将会交错混杂在一起通过网络发给所有的cohorts. 结果将是一片混乱和不确定. 3PC虽然是非阻塞的, 但是他的超高延迟和缺乏网络分区的忍耐性让它的实际应用大打折扣.
 
 2PC和3PC的主要缺点就在于他们的正确性都是假设分布式系统中网络是稳定的, 延迟稳定, 带宽无限 [1994, Peter Deutsch] 而当网络分区的时候, 节点的故障判断非常困难. 2PC和3PC假设节点的故障判断非常容易, 就是超时, 并且假设节点故障之后不会自动恢复. 这种假设叫做crash-stop, 意思就是说我看不到你就认为你挂了, 有点像王明阳的”你未看此花时，此花与汝心同归于寂”, 在分布式系统中这种故障模型的假设是比较窄的. 你必须要假设你看不到他的时候, 他也可能活着, 说不定过了几秒钟他可能又给你发消息和你交互了. 在大多数情况下, 我们至少要把故障模型放大到crash-recovery.
 
@@ -105,7 +105,7 @@ Two Generals Paradox在1975年被提出[Some Constraints and Trade-offs in the D
 
 <img src="/images/2015-11-24/byzantine_generals.png" max-height="500px">
 
-但是同步网络现实生活中太少, 如果要考虑在异步网络之中, 拜占庭将军问题是非常难解决的, 实际上根据FLP定理, 异步网络中是没有完全同时保证safety和liveness的一致性算法的. 但是在实际工程中我们如果放松liveness的要求, 是有实际可用的算法的, 这个算法进入无限循环的概率非常非常低. 1999年Miguel Castro和Barbara Liskov提出了PBFT算法(Practical Byzantine Fault Tolerance), 这个算法可以在异步网络中不保证liveness的情况下解决拜占庭将军问题. 虽然不保证Liveness但是这个算法进入无限循环的概率非常低, 在工程中是完全可用的. 实际上他们实现了一个PBFT的分布式NFS文件服务器, 最坏的时候性能只下降了24%! 为此Barbara Liskov获得了2008年代图灵奖. 有兴趣的同学可以自己去看 Practical Byzantine Fault Tolerance and Proactive Recovery. (ACM Transactions on Computer Systems, Vol. 20, No. 4, November 2002, Pages 398–461.) 
+但是同步网络现实生活中太少, 如果要考虑在异步网络之中, 拜占庭将军问题是非常难解决的, 实际上根据FLP定理, 异步网络中是没有完全同时保证safety和liveness的一致性算法的. 但是在实际工程中我们如果放松liveness的要求, 是有实际可用的算法的, 这个算法进入无限循环的概率非常非常低. 1999年Miguel Castro和Barbara Liskov提出了PBFT算法(Practical Byzantine Fault Tolerance), 这个算法可以在异步网络中不保证liveness的情况下解决拜占庭将军问题. 虽然不保证Liveness但是这个算法进入无限循环的概率非常低, 在工程中是完全可用的. 实际上他们实现了一个PBFT的分布式NFS文件服务器, 最坏的时候性能只下降了24%! 为此Barbara Liskov获得了2008年代图灵奖. 有兴趣的同学可以自己去看 Practical Byzantine Fault Tolerance and Proactive Recovery. (ACM Transactions on Computer Systems, Vol. 20, No. 4, November 2002, Pages 398–461.)
 
 顺便提一句, 面向对象中的Liskov替换原则也是她提出的.
 
@@ -126,9 +126,9 @@ FLP中设计的模型是一个比现实情况要更可靠的模型, 当然了, �
 
 <img src="/images/2015-11-24/lynch.jpg" max-height="500px">
 
-图片来源: MIT, Nancy Lynch, 两次Dijkstra奖获得者. 
+图片来源: MIT, Nancy Lynch, 两次Dijkstra奖获得者.
 
-所有consensus问题最终在异步网络上只要有一个故障节点就都无法达成完全一致并结束. 这个理论的证明非常重要, 它终止了多年的争论, 现在你可以省省力气了, 不要再浪费精力去试图设计一个能在异步网络上能够容忍各种故障并保持一致的系统了. 比如分布式事务是永远无法实现单体应用级别的一致性的. 
+所有consensus问题最终在异步网络上只要有一个故障节点就都无法达成完全一致并结束. 这个理论的证明非常重要, 它终止了多年的争论, 现在你可以省省力气了, 不要再浪费精力去试图设计一个能在异步网络上能够容忍各种故障并保持一致的系统了. 比如分布式事务是永远无法实现单体应用级别的一致性的.
 
 无论是Paxos还是Raft算法, 理论上都可能会进入无法表决通过的死循环(但是这个概率其实是非常非常低的), 但是他们都是满足safety的, 只是放松了liveness的要求, Barbara Liskov的PBFT也是这样. 在实际应用中, 上下游系统之间的一致性其实应该避免使用2PC或者Paxos Commit, 我们也可以通过其他方式来实现最终的一致, 有时候你不得不接受短时间的不一致在分布式系统中是一种常态的事实. CAP理论的提出者Eric Brewer曾经这样说过:
 

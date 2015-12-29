@@ -8,6 +8,11 @@ published: false
 # Eventual Consistency
 
 CRDT
+lattice consistency
+https://aphyr.com/posts/294-jepsen-cassandra
+PN-counter
+G-sets 2P-sets, OR-sets
+microsoft video
 
 # CAP Theorem
 

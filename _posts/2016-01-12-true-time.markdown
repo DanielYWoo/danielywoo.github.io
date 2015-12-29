@@ -1,0 +1,24 @@
+---
+layout: post
+title:  "分布式系统中的时间"
+date:   2015-10-28 13:11:45
+published: false
+---
+
+TODO: in progress
+
+1. Leslie Lamport 1978 paper
+
+2. Google Spanner
+
+3. Cassandra concurrent writes
+write(x, 1), write(x, 2), write(x, 3)
+R=3, W=3, N=3
+
+cassandra resolves conflicts with client timestamp, without the client timestamp the results could be
+Node1:1, Node2:2, Node3:3
+
+With client timestamp, we don't have linearizabilty but at least the 3 nodes are consistent. Timestamp is also used for replaying from hint writes. If client clock drifts too much, you will see writes out of real-time order. If we can limit client clock drifts to 200ms, it's good enough for non-critical writes (user nickname update, reply to a forum thread, etc).
+
+if two writes occurs at the same time with the same timestamp, if value1 > value2, then value1 wins.
+

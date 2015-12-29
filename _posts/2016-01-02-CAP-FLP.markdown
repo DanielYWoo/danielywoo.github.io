@@ -1,0 +1,27 @@
+---
+layout: post
+title:  "CAP & FLP"
+date:   2015-10-28 13:11:45
+published: false
+---
+
+TODO: in progress
+
+ CAP缺乏严格的理论场景, 作为一个theorem他的描述太不严格. 甚至有人说CAP is CRAP. 什么是C? Consistency是指数据库的ACID里的C么? 不是, 其实C是指分布式系统的Linearizability级别的一致性. 但是这一点一直没有说清楚, 直到2012年, Lynch和Gilbert发表了一篇论文[Perspectives on the CAP Theorem]重新阐释了CAP, 才更加确切的定义了C. 文中做一个分布式web service的例子, 其中Consistency的定义依赖于服务的特性, 服务可以分为四类:
+ 1. trivial serivce: 不需要节点交互的服务, 比如转换摄氏度和华氏度. 讨论这个没有意义.
+ 2. weekly consistent service: 
+ 3. simple service: 比如一个分布式读写寄存器(consensus的模型), 这是C其实就是linearizaiblity
+ 4. complicated service: 
+ 其实C这里是指linarizability.
+
+
+ Availability: 表示一个请求总是可以得到返回结果, 尽管可能返回不一致的结果. 但是多久返回?
+
+ Partition-tolerance: 这没得选, 这是一个前提假设. 在一个异步网络中, 网络分区是不可避免的事实存在的. 实际上在一个异步网络之中, 就算是没有丢包, 网络是正常的, 也有可能由于一个包的延迟造成一些结点认为某个结点p1无法访问, 这也是一种网络分区的情况.
+
+ 所以, CAP更好的说法应该是, 在一个不可靠的网络中, 不可能有一个分布式读写寄存器同时具有C和A.
+
+
+
+
+ 这篇文章消除了很多人的困惑. 文中说明了两点. 第一, C其实就是safety, A就是liveness, P是不可避免的unreliable network(异步网络). CAP其实是告诉我们在一个不可靠的分布式系统中safety和liveness只能确保其中一个. 这其实和FLP理论不谋而合, FLP是告诉我们在异步网络中如果要保证safety(total correct)你就无法保证liveness. 无论是CAP还是FLP都是在告诉我们这个最基础的道理: 分布式系统中safety和liveness需要取舍, 只不过是1985年的FLP是从consensus问题入手来阐述这个取舍关系. consensus问题中的validity和agreement是safety的体现, termination是liveness的体现. CAP只是更加宽泛, 除了consensus问题也适用于其他类型的问题.

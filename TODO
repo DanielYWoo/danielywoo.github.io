@@ -1,2 +1,17 @@
 self-stabilization, token ring, gossip, swim
+
 FLP and CAP
+
+true time API
+
+best effort consistency: sloppy quorum, hinted handoff
+
+read-write locks: jdk rw lock, stamped lock, http://blog.takipi.com/java-8-stampedlocks-vs-readwritelocks-and-synchronized/, test with 20% write, 80% read
+https://github.com/npgall/concurrent-locks
+https://blogs.oracle.com/dave/resource/ppopp13-dice-NUMAAwareRWLocks.pdf
+
+dynamic quorum
+https://issues.apache.org/jira/secure/attachment/12525379/zkreconfig-usenixatc-final.pdf
+https://zookeeper.apache.org/doc/trunk/zookeeperReconfig.html#sc_reconfig_file
+https://gist.github.com/miketheman/6057930
+

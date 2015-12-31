@@ -15,3 +15,15 @@ https://issues.apache.org/jira/secure/attachment/12525379/zkreconfig-usenixatc-f
 https://zookeeper.apache.org/doc/trunk/zookeeperReconfig.html#sc_reconfig_file
 https://gist.github.com/miketheman/6057930
 
+java gc
+hint:
+http://www.cs.berkeley.edu/~necula/Papers/hinted-collection-ismm13.pdf
+http://buytaert.net/files/hipeac05-paper.pdf
+value types, and immortal
+http://lmax-exchange.github.io/disruptor/files/Disruptor-1.0.pdf
+
+Queue theory
+little's law
+
+log performance
+log4j1.x log4j2.x (sync/async) python logging, python logbook, syslog (sync/async), stdout in c/java/python

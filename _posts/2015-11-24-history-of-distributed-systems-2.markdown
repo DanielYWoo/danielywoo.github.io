@@ -30,9 +30,8 @@ Failure: 如果一个系统的error没能在错误状态传递给其它节点之
 3. omission failures: 比crash-recovery多了一个限制, 就是一定要非健忘. 有些算法要求必须是非健忘的. 比如最基本版本的Paxos要求节点必须把ballot number记录到持久存储中, 一旦crash, 修复之后必须继续记住之前的ballot number.
 4. crash-stop failures: 也叫做crash failure或者fail-stop failures, 它比omission failure多了一个故障发生后要停止响应的要求. 比如一个节点出现故障后立即停止接受和发送所有消息, 或者网络发生了故障无法进行任何通信, 并且这些故障不会恢复. 简单讲, 一旦发生故障, 这个节点 就不会再和其它节点有任何交互. 就像他的名字描述的那样, crash and stop.
 
-分布式系统中的故障类型还有其他的分类方法, 有些分类会把omission去掉, 有些会加入performance failures, 有些会把crash-stop和fail-stop根据故障检测能力区分开, 此处介绍的是使用较为广泛的一种分类方法.
+分布式系统中的故障类型还有其他的分类方法, 有些分类会把omission去掉, 有些会加入performance failures, 有些会把crash-stop和fail-stop根据故障检测能力区分开, 此处介绍的是使用较为广泛的一种分类方法. 他们的关系如下:
 
-他们的关系如下:
 <img src="/images/2015-10-05/failures.png" max-height="500px">
 
 这四种故障中, 拜占庭式故障是非常难以解决的, Leslie Lamport证明在同步网络下, 有办法验证消息真伪, 故障节点不超过1/3的情况下才有可能解决. 在现实中, 这类问题解决成本非常高, 只有在非常关键的领域会考虑使用BFT(Byzantine Fault Tolerance)的设计. 比如NASA的航天飞机有5台可以抵抗各种射线影响的AP-101系列计算机, 其中四台使用同样的软件运行, 另外一台独立运行另外一个独立编写版本的软件. 空客A320有7台计算机, 分别是三种硬件上运行的三套独立编写的软件. 美国海军的海狼级核动力攻击型潜水艇(SSN-21)也采用了多组计算机控制. 绝大多数应用是不太考虑重力加速度和射线辐射对硬件的影响的, 稍后本文会介绍拜占庭将军问题来具体解释一下这类问题. 大多数分布式应用主要是关注crash-recovery的情况, 而crash-stop是一种过于理想化的情况, 后面我们在介绍Paxos算法的时候会给大家讲解为什么这个过于理想化的故障模型会带来什么样的问题.

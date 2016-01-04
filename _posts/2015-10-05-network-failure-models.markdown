@@ -29,7 +29,7 @@ Failure: 如果一个系统的error没能在错误状态传递给其它节点之
 3. omission failures: 比crash-recovery多了一个限制, 就是一定要非健忘. 有些算法要求必须是非健忘的. 比如最基本版本的Paxos要求节点必须把ballot number记录到持久存储中, 一旦crash, 修复之后必须继续记住之前的ballot number.
 4. crash-stop failures: 也叫做crash failure或者fail-stop failures, 它比omission failure多了一个故障发生后要停止响应的要求. 比如一个节点出现故障后立即停止接受和发送所有消息, 或者网络发生了故障无法进行任何通信, 并且这些故障不会恢复. 简单讲, 一旦发生故障, 这个节点 就不会再和其它节点有任何交互. 就像他的名字描述的那样, crash and stop.
 
-分布式系统中的故障类型还有其他的分类方法, 有些分类会把omission去掉, 有些会加入performance failures, 此处介绍的是使用较为广泛的一种分类方法.
+分布式系统中的故障类型还有其他的分类方法, 有些分类会把omission去掉, 有些会加入performance failures, 有些会把crash-stop和fail-stop根据故障检测能力区分开, 此处介绍的是使用较为广泛的一种分类方法.
 
 他们的关系如下:
 <img src="/images/2015-10-05/failures.png" max-height="500px">

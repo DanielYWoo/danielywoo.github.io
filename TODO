@@ -27,3 +27,6 @@ little's law
 
 log performance
 log4j1.x log4j2.x (sync/async) python logging, python logbook, syslog (sync/async), stdout in c/java/python
+
+seqlock/stamplock/readwrite lock/rw lock upgrade/benchmark
+

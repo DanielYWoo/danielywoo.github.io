@@ -1,10 +1,10 @@
 # Site settings
-title: Daniel
+title: Daniel | Coder
 email: daniel.y.woo@gmail.com
-description: This is a tech blog of Daniel Wu. 未经允许, 不得转载.
+description: 未经允许, 不得转载.
 baseurl: "" # the subpath of your site, e.g. /blog/
 url: "http://danielw.cn" # the base hostname & protocol for your site
-#twitter_username:
+twitter_username: danielywoo
 github_username:  danielywoo
 
 # Build settings

@@ -1,5 +1,5 @@
 # Site settings
-title: Daniel | Enjoy Coding
+title: Daniel
 email: daniel.y.woo@gmail.com
 description: This is a tech blog of Daniel Wu. 未经允许, 不得转载.
 baseurl: "" # the subpath of your site, e.g. /blog/
@@ -9,9 +9,7 @@ github_username:  danielywoo
 
 # Build settings
 markdown: kramdown
-
 permalink: "/:title"
-
-google_analytics: 
-show_downloads: true
+google_analytics: "UA-67268519-1"
+show_downloads: false
 theme: jekyll-theme-tactile

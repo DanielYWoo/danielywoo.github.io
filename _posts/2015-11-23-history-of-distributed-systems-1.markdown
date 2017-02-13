@@ -85,7 +85,7 @@ Leslie Lamport在Lamport Clock之后第二年1979年提出了Sequential Consiste
 
 这看起来很晦涩, 我们用通俗但不严谨的语言来表述, 他蕴含了两个部分, 第一是事件历史在各个进程上看全局一致, 第二是单个进程的事件历史在全局历史上符合程序顺序(program order).
 
-第一个要求比较容易理解, 给个例子: 假设有四个进程P0, P1, P2, P3分别读取和写入一个变量x, 横轴从左往右表示物理时间的流逝. 对于下图中A的情况这就是大家比较容易理解的情况, 这就是Sequential Consistency. B图中你可能觉得, 好像P2和P3读出来的x变量顺序和物理时间不一致了么, 但是对于P2和P3来说, 他们虽然对x的历史的顺序和真实物理时间不一致, 但是P2和P3至少"错的一致"啊, 所以只要P0, P1, P2, P3全体都认为x是先被P2写入的2, 后被P0写入的1, 那么我们认为这种情况仍然是一致的. 这样的一致性模型就是Sequential Consistency.
+第一个要求比较容易理解, 给个例子: 假设有四个进程P0, P1, P2, P3分别读取和写入一个变量x, 横轴从左往右表示物理时间的流逝. 对于下图中A的情况这就是大家比较容易理解的情况, 这就是Sequential Consistency. B图中你可能觉得, 好像P2和P3读出来的x变量顺序和物理时间不一致了么, 但是对于P2和P3来说, 他们虽然对x的历史的顺序和真实物理时间不一致, 但是P2和P3至少"错的一致"啊, 所以只要P0, P1, P2, P3全体都认为x是先被P1写入的2, 后被P0写入的1, 那么我们认为这种情况仍然是一致的. 这样的一致性模型就是Sequential Consistency.
 
 <img src="/images/2015-11-23/sc1.png" max-height="500px">
 
@@ -219,6 +219,3 @@ Linearizability和Sequential Consistency你可以把它们想象成一个烧烤�
 至于Linearizability的实现, 可以说是所有一致性模型里最丰富的了, 我们会在本系列下一篇文章中介绍.
 
 如果你耐心看到这里了, 至此, 我们已经开了一个好头, 你一定是对分布式系统的一致性问题很感兴趣, 在本系列下一篇文章中我们将会提到Linearizability和Sequential Consistency的一些应用. 将来我们还会继续介绍Casual Consistency, PRAM, Eventual Consistency这些性能更好但是一致性更弱的模型, 所以, stay tuned!
-
-
-

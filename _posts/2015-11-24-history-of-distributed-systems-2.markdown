@@ -16,9 +16,9 @@ published: true
 
 # fault, error and failure
 这不是绕口令, 你一定要区分他们的关系. 过去很多时候这些词汇混用导致很多问题, 后来统一了这几个词的定义:
-Fault: 在系统中某一个步骤偏离正确的执行叫做一个fault, 比如内存写入错误, 但是如果内存是ECC的那么这个fault可以立刻被修复, 就不会导致error.
-Error: 如果一个fault没能在结果影响到整个系统状态之前被修复, 结果导致系统的状态错误, 那么这就是一个error, 比如不带ECC的内存导致一个计算结果错误.
-Failure: 如果一个系统的error没能在错误状态传递给其它节点之前被修复, 换句话说error被扩散出去了, 这就是一个failure.
+1. Fault: 在系统中某一个步骤偏离正确的执行叫做一个fault, 比如内存写入错误, 但是如果内存是ECC的那么这个fault可以立刻被修复, 就不会导致error.
+2. Error: 如果一个fault没能在结果影响到整个系统状态之前被修复, 结果导致系统的状态错误, 那么这就是一个error, 比如不带ECC的内存导致一个计算结果错误.
+3. Failure: 如果一个系统的error没能在错误状态传递给其它节点之前被修复, 换句话说error被扩散出去了, 这就是一个failure.
 
 所以他们的关系是fault导致error, error导致failure. 在分布式系统中, 每个节点很难确定其它节点内部的状态, 通常只能通过和其他节点的交互监测到failure. 接下来我们所说的故障一般都是指failure.
 
@@ -26,9 +26,9 @@ Failure: 如果一个系统的error没能在错误状态传递给其它节点之
 在分布式系统中, 故障可能发生在节点或者通信链路上, 下面我们按照从最广泛最难的到最特定最简单的顺序列出故障类型:
 
 1. byzantine failures: 这是最难处理的情况, 一个节点压根就不按照程序逻辑执行, 对它的调用会返回给你随意或者混乱的结果. 要解决拜占庭式故障需要有同步网络, 并且故障节点必须小于1/3, 通常只有某些特定领域才会考虑这种情况通过高冗余来消除故障. 关于拜占庭式故障你现在只要知道这是最难的情况, 稍后我们会更详细的介绍它.
-2. crash-recovery failures: 它比byzantine类故障加了一个限制, 那就是节点总是按照程序逻辑执行, 结果是正确的. 但是不保证消息返回的时间. 原因可能是crash后重启了, 网络中断了, 异步网络中的高延迟. 对于crash的情况还要分健忘(amnesia)和非健忘的两种情况. 对于健忘的情况, 是指这个crash的节点重启后没有完整的保存crash之前的状态信息, 非健忘是指这个节点crash之前能把状态完整的保存在持久存储上, 启动之后可以再次按照以前的状态继续执行和通信.
-3. omission failures: 比crash-recovery多了一个限制, 就是一定要非健忘. 有些算法要求必须是非健忘的. 比如最基本版本的Paxos要求节点必须把ballot number记录到持久存储中, 一旦crash, 修复之后必须继续记住之前的ballot number.
-4. crash-stop failures: 也叫做crash failure或者fail-stop failures, 它比omission failure多了一个故障发生后要停止响应的要求. 比如一个节点出现故障后立即停止接受和发送所有消息, 或者网络发生了故障无法进行任何通信, 并且这些故障不会恢复. 简单讲, 一旦发生故障, 这个节点 就不会再和其它节点有任何交互. 就像他的名字描述的那样, crash and stop.
+2. crash-recovery failures: 它比byzantine类故障加了一个限制, 那就是节点总是按照程序逻辑执行, 结果是正确的. 但是不保证消息返回的时间. 原因可能是crash后重启了, 网络中断了, 异步网络中的高延迟. 对于crash的情况还要分健忘(amnesia)和非健忘的两种情况. 对于健忘的情况, 是指这个crash的节点重启后没有完整的保存crash之前的状态信息, 非健忘是指这个节点crash之前能把状态完整的保存在持久存储上, 启动之后可以再次按照以前的状态继续执行和通信, 比如最基本版本的Paxos要求节点必须把ballot number记录到持久存储中, 一旦crash, 修复之后必须继续记住之前的ballot number.
+3. omission failures: 这种故障比crash-recovery多一个限制，就是发生故障后，消息不会恢复。比如网络故障造成某条消息在传输中丢失(而不是延迟).
+4. crash-stop failures: 也叫做crash failure或者fail-stop failures, 它比omission failure容易处理, 因为这种模型下故障就是crash, 并且这些故障不会恢复. 比如一个节点出现故障后立即停止接受和发送所有消息. 简单讲, 一旦发生故障, 这个节点就不会再和其它节点有任何交互. 就像他的名字描述的那样, crash and stop.
 
 分布式系统中的故障类型还有其他的分类方法, 有些分类会把omission去掉, 有些会加入performance failures, 有些会把crash-stop和fail-stop根据故障检测能力区分开, 此处介绍的是使用较为广泛的一种分类方法. 他们的关系如下:
 
@@ -50,7 +50,7 @@ Consensus问题的定义包含了三个方面, 一般的Consensus问题定义为
 
 Consensus要满足以下三个方面: termination, agreement 和 validity. 这三个要素定义了所有Consensus问题的本质. 其中termination是liveness的保证, agreement和validity是safety的保证, 分布式系统的算法中liveness和safety就像一对死对头, 关于liveness和safety的关系, 我们将会在本系列后面的文章中介绍. 所有需要满足这三要素的问题都可以看做是Consensus问题的变体.
 
-在异步网络中, 如果是拜占庭式故障, 那么Paxos和Raft也无法解决这一类问题, 严格讲这是没有办法解决的, 很长一段时间内我们只看到在航天和军事领域通过同步网络解决此类问题. (直到Babara Liskov在2002年提出PBFT我们才可以在放松liveness的情况下解决此类问题, 为此Barbara Liskov获得了图灵奖. 我们可能会在将来的文章中介绍PBFT). 对于一般的应用来说拜占庭故障出现的概率太低而解决的成本实在是太高, 所以我们一般不考虑拜占庭式故障. 我们主要是关注crash-recovery failure的模型下的异步网络. 这种情况下根据FLP理论, 只要有一个故障节点, Paxos/Raft都是有可能进入无限循环而无法结束的, 但是实际上这个概率非常低, 如果放松liveness的要求, 我们认为这种情况下Paxos/Raft是可以解决的. 以下介绍Consensus问题的时候我们都不考虑拜占庭式故障, 我们的故障模型是crash-recovery failures, 网络模型是异步网络.
+在异步网络中, 如果是拜占庭式故障, 那么在异步网络下Paxos和Raft是没有办法解决的, (直到Babara Liskov在2002年提出PBFT我们才可以在放松liveness的情况下解决此类问题, 为此Barbara Liskov获得了图灵奖. 我可能会在将来的文章中介绍PBFT). 对于一般的应用来说拜占庭故障出现的概率太低而解决的成本实在是太高, 所以我们一般不考虑拜占庭式故障. 我们主要是关注crash-recovery failure的模型下的异步网络. 这种情况下根据FLP理论, 只要有一个故障节点, Paxos/Raft都是有可能进入无限循环而无法结束的, 但是实际上这个概率非常低, 如果放松liveness的要求, 我们认为这种情况下Paxos/Raft是可以解决的. 以下介绍Consensus问题的时候我们都不考虑拜占庭式故障, 我们的故障模型是crash-recovery failures, 网络模型是异步网络.
 
 在同步网络中因为所有节点时间偏移有上限, 所有包的传输延迟也有上限, 节点会在一个round内完成计算并且传输完成, 所以一旦超过一定时间还没有收到返回的消息, 我们就可以确定要么网络中断要么节点已经crash. 但是我们现实当中都是异步网络, 传输延迟是没有固定上限的, 当很长时间一个节点都没有返回消息的时候, 我们不知道是这个节点计算速度太慢, 还是已经crash了. 如果是这个节点计算太慢, 超时之后, 过了一会这个节点又把结果再发回来了, 这就超出crash-stop故障模型的范围了, 这种情况需要用crash recovery的模型来解决. 在异步网络中无法区分crash和包延迟会导致consensus问题非常难解决.
 

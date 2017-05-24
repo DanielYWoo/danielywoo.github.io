@@ -175,7 +175,7 @@ Paxos的过半表决有一定局限性. 这牵扯到分区可用性. 如果网�
 
 除了网络分区, Paxos的另外一个缺点是延迟比较高. 因为Paxos放松了liveness, 它有时候可能会多个回合才能决定结果, 错误的实现甚至会导致live lock. 比如proposer A提出n1, proposer B提出n2, 如果n1 > n2, acceptor先接受了n1, B收到拒绝之后重新发起n3, 如果n3先于A的确认消息到达acceptor, 而且n3 > n1, 那么acceptor会拒绝A, 接受B, A可能会重复B的行为, 然后无限循环下去.
 
-FLP理论描述了Consensus可能会进入无限循环的情况, 但是实际应用中这个概率非常低, 大家都知道计算机科学是应用科学, 不是离散数学那样非正即误, 如果错误或者偏离的概率非常低, 工程中就会采用. 比如费马小定理(Fermat’s Little Theorem) 由于Carmichael Number的存在并不能用来严格判断大素数, 但是由于Carmichael Number实在是太少, 1024 bit的范围里概率为10^-88, 所以RSA算法还是会用费马小定理. 同样, 根据FLP理论, 异步网络中Paxos可能会进入无限循环. 真实世界中Paxos的如果两个节点不断的互相否定, 那么就会出现无限循环, 但是要永远持续下去的概率非常非常低, 实际中我们经常让某个Proposer获取一定期限的lease, 在此期限之内只有一个proposer接受客户端请求并提出 proposal. 或者随机改变n的增长节奏和proposer的发送节奏等, 来降低livelock的概率. 当然, 单从纯粹FLP理论来看, 超过一个proposer的时候Paxos是不保证liveness的.
+FLP理论描述了Consensus可能会进入无限循环的情况, 但是实际应用中这个概率非常低, 大家都知道计算机科学是应用科学, 不是离散数学那样非正即误, 如果错误或者偏离的概率非常低, 工程中就会采用. 根据FLP理论, 异步网络中Paxos可能会进入无限循环. 真实世界中Paxos的如果两个节点不断的互相否定, 那么就会出现无限循环, 但是要永远持续下去的概率非常非常低, 实际中我们经常让某个Proposer获取一定期限的lease, 在此期限之内只有一个proposer接受客户端请求并提出 proposal. 或者随机改变n的增长节奏和proposer的发送节奏等, 来降低livelock的概率. 当然, 单从纯粹FLP理论来看, 超过一个proposer的时候Paxos是不保证liveness的.
 
 Paxos在实现中, 每个进程其实一般都是身兼三职, 然后成功提议的那个proposer所在的进程就是 distinguished proposer, 也是 distinguished learner, 我们称之为 leader.
 

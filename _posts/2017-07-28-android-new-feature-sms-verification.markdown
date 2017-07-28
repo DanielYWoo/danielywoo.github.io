@@ -39,17 +39,18 @@ published: true
 {% highlight java linenos %}
 PendingIntent intent = PendingIntent.getActivity(this, 0,
     new Intent(this, SmsTokenResultVerificationActivity.class), 0);
-String appSmsToken = SmsManager.getDefault().createAppSpecificSmsToken(intent);
+String appSmsToken = SmsManager.getDefault().
+    createAppSpecificSmsToken(intent);
 {% endhighlight %}
 
 为了测试，我们跳过服务器部分，直接模拟服务器调用短信通道网关成功，所以你需要在模拟器中向虚拟机发送一条短信，内容为appSmsToken和假设是服务器生成的code，中间用空格隔开。(当然，你也可以用其它格式, 比如json)
 
 这时候你会发现SmsTokenResultVerificationActivity这个Activity被唤起了，你可以在这个Activity的onCreate里加入日志, 或者显示到界面上来验证短信内容：
 
-
 {% highlight java linenos %}
 TextView view = findViewById(R.id.result);
-for (SmsMessage pdu : Telephony.Sms.Intents.getMessagesFromIntent(getIntent())) {
+for (SmsMessage pdu : Telephony.Sms.Intents.
+    getMessagesFromIntent(getIntent())) {
     String message = pdu.getDisplayMessageBody();
     Log.i("SMS message", message);
     view.append(message);

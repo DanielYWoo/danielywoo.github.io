@@ -159,7 +159,7 @@ Consensus主要目的是屏蔽掉故障节点的噪音让整个系统正常运�
 
 对证明有兴趣的读者可以去看看Paxos Made Simple. 简单来讲, 算法的正确性有两个方面
 
-1. 提议的safety是由sequence number N决定的, 如果N是全序集, 唯一而且一定有先后, 并且在每个proposer上都单调递增, 那么acceptor选择的结果就是安全的. 实际应用中, 这个N经常是timestamp, 进程id, 还有进程的本体counter的组合, 比如: timestamp + node id + counter, 或者像twitter的snowflake基于timestamp和网卡mac地址的算法. 这样可以保证事件顺序尽量接近物理时间的顺序, 同时保证事件number的唯一性.
+1. 提议的safety是由sequence number N决定的, 如果N是全序集, 唯一而且一定有先后, 并且在每个proposer上都单调递增, 那么acceptor选择的结果就是安全的. 实际应用中, 这个N经常是timestamp, 进程id, 还有进程的本体counter的组合, 比如: timestamp + node id + counter, 或者像twitter的snowflake基于timestamp和网卡mac地址的算法. 这样可以保证事件顺序尽量接近物理时间的顺序, 同时保证事件number的唯一性. （注意，这个方法并非完美，因为如果有NTP同步时间，那么系统时间可能会变小导致n没有单调递增, 更好的做法是timestamp只启动时生成一次，后面只变counter, 或者有状态保存counter)
 
 2. 过半表决可以保证网络出现多个分区的时候, 任何两个能够过半的分区必然存在交集, 而交集内的进程就可以保证正确性被继承, 以后被传播出去.
 

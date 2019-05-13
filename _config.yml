@@ -3,7 +3,7 @@ title: Daniel | Coder
 email: daniel.y.woo@gmail.com
 description: 未经允许, 不得转载.
 baseurl: "" # the subpath of your site, e.g. /blog/
-url: "http://danielw.cn" # the base hostname & protocol for your site
+url: "https://danielw.cn" # the base hostname & protocol for your site
 twitter_username: danielywoo
 github_username:  danielywoo
 

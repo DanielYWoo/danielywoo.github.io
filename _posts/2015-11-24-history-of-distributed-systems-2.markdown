@@ -56,7 +56,7 @@ Consensus要满足以下三个方面: termination, agreement 和 validity. 这�
 
 # 两阶段提交和三阶段提交, Two Generals Paradox, 1975 - 1981
 
-两阶段提交(two phase commit) 或者又简称为2PC是解决consensus问题的一个方法. 在Paxos算法出现之前, Jim Gary在在Leslie Lamport那篇开山之作的同年1978年提出了two phase commit的概念, 图灵奖获得者Jim Gary是分布式事务的专家, 他所设计的2PC的主要用途是实现分布式事务, 让两个数据库或者队列参与同一个分布式事务. 这个过程中有Coordinator负责协调各个资源参与者(cohort)去提交或者回滚自己的事务. 首先coordinator会通知所有cohort告诉他们要提交的内容, 如果cohort写入成功(这时还没有提交), 那么cohort返回同意的应答给coordinator. 然后coordinator收集到全部的应答之后如果有任何一个应答是拒绝的(某个cohort写入失败), 那么coordinator就通知所有cohort回滚, 否则通知所有cohort提交.
+两阶段提交(two phase commit) 或者又简称为2PC是解决consensus问题的一个方法. 在Paxos算法出现之前, Jim Gary在在Leslie Lamport那篇开山之作的同年1978年提出了two phase commit的概念[1], 图灵奖获得者Jim Gary是分布式事务的专家, 他所设计的2PC的主要用途是实现分布式事务, 让两个数据库或者队列参与同一个分布式事务. 这个过程中有Coordinator负责协调各个资源参与者(cohort)去提交或者回滚自己的事务. 首先coordinator会通知所有cohort告诉他们要提交的内容, 如果cohort写入成功(这时还没有提交), 那么cohort返回同意的应答给coordinator. 然后coordinator收集到全部的应答之后如果有任何一个应答是拒绝的(某个cohort写入失败), 那么coordinator就通知所有cohort回滚, 否则通知所有cohort提交.
 
 <img src="/images/2015-11-24/2pc.jpg" max-height="500px">
 
@@ -68,7 +68,7 @@ Consensus要满足以下三个方面: termination, agreement 和 validity. 这�
 
 <b>虽然2PC并不能像很多人想象的那样保证事务的一致性</b>, 不考虑超时回滚的情况下它是安全的, 2PC可以保证safety但是不保证liveness. 为了解决这个阻塞问题, 后来又出现了3PC. 2PC的阻塞主要原因是当coordinator和cohorts同时crash的时候, 之前cohorts之间没有沟通过表决的结果, 他们只和coordinator表决过, 表决结果没有保留下来, 就算立即重新启动一个新的coordinator也无法判断刚才事务的状态, 所以他们会进入群龙无首, 进退两难的情况, 如果有一轮协商的过程, 那么即便coordinator挂了, 也可以再启动一个coordinator去询问cohorts上一轮协商的结果并把事务继续下去, 那就能解决阻塞问题了.
 
-三年后出现的3PC [Nonblocking Commit Protocols, Dale Skeen, 1981] 就是在2PC两个阶段之间插入一个阶段增加了一个相互协商的过程, 并引入了超时来防止阻塞. 这个中间阶段让coordinator发现全体写入资源并收到ACK之后, 先发一个prepare commit消息到全体cohorts, 当cohort全体都同意并返回ACK给coordinator之后, coordinator才发commit消息出去让cohorts提交.
+三年后出现的3PC[2]就是在2PC两个阶段之间插入一个阶段增加了一个相互协商的过程, 并引入了超时来防止阻塞. 这个中间阶段让coordinator发现全体写入资源并收到ACK之后, 先发一个prepare commit消息到全体cohorts, 当cohort全体都同意并返回ACK给coordinator之后, coordinator才发commit消息出去让cohorts提交.
 
 如果prepare commit发出给A之后, coordinator和A都挂了, 如果立刻重新启动一个新的coordinator, 那么它发现B没有收到过prepare commit, 这个coordinator就可以发消息给所有cohorts去取消提交. B会回滚, 当A恢复回来之后可以去问coordinator或者任何一个cohort都会知道事务已经回滚. 这样整个事务就回滚了, 因为表决结果通过prepare commit消息可以保留在所有cohorts节点上, 这个情况是2PC无法解决的.
 
@@ -80,7 +80,7 @@ Consensus要满足以下三个方面: termination, agreement 和 validity. 这�
 
 实际上, 3PC没有什么实际应用, 高延迟是个很大的局限, 而且它还有一个更严重的问题, 那就是在网络分区的情况下也会出现事务不一致问题. 解释原因之前先介绍一下Two Generals Paradox问题.
 
-Two Generals Paradox在1975年被提出[Some Constraints and Trade-offs in the Design of Network Communications], 但是广为人知还是靠分布式事务的专家Jim Gray在1978年的一篇文章[Notes on Database Operating Systems]中再次提及这个问题(估计是因为Jim Gray名气太大). 问题描述的是有两个将军A和B分别处于敌军的东侧和西侧, 他们决定互相派信使, 好商量一个时间来同时发起攻击, 如果这个时间没有商量好, 一方先攻击了, 那么就会战败. 但是问题来了, 假设将军里没有叛徒(没有故障节点发出faulty message), 信使如果被中间的敌人抓住了, 会被直接被处死(会有丢包, 但是不会被篡改消息), 那么这两个将军能达成一致么? 好了, 看出来了吧, 这就是一个最简单的consensus问题. 这其实是一个弱化版本的拜占庭将军问题.
+Two Generals Paradox在1975年被提出[3], 但是广为人知还是靠分布式事务的专家Jim Gray在1978年的一篇文章"Notes on Database Operating Systems"[1]中再次提及这个问题(估计是因为Jim Gray名气太大), Two Generals Paradox这个名字也是Jim Gray起的. 问题描述的是有两个将军A和B分别处于敌军的东侧和西侧, 他们决定互相派信使, 好商量一个时间来同时发起攻击, 如果这个时间没有商量好, 一方先攻击了, 那么就会战败. 但是问题来了, 假设将军里没有叛徒(没有故障节点发出faulty message), 信使如果被中间的敌人抓住了, 会被直接被处死(会有丢包, 但是不会被篡改消息), 那么这两个将军能达成一致么? 好了, 看出来了吧, 这就是一个最简单的consensus问题. 这其实是一个弱化版本的拜占庭将军问题.
 
 如果A送了一个信使m1去B商量一个进攻时间, B收到之后必须要这个信使回去告诉A自己收到消息了, 这是一个ACK应答消息, 没有ACK显然双方是无法达成确认一致的. 可是如果信使m1回去路上被抓住了, 被杀了. A这个时候等了半天没人回来, 他就会进入两难的境地, 到底是信使m1是去的路上被杀了, 还是回来的路上被杀了呢? 前者是B没有收到消息, A就不能在指定时间发起进攻, 后者是B已经收到了消息, A就必须要进攻. 实际上, 就算A收到了信使m1带回的B的ACK消息, 虽然A放心了, 但是B也不能放心. 因为B送走m1之后, B并不知道他的ACK有没有回到A那里, 如果回到A那里了, B认为自己可以发动攻击, 但是万一信使m1回去路上被杀了, A没有收到ACK, B岂不是会自己贸然发动进攻了? 怎么办?
 
@@ -96,7 +96,7 @@ Two Generals Paradox在1975年被提出[Some Constraints and Trade-offs in the D
 
 # Byzantine Generals Problem
 
-前面提到的Two General Paradox实际上是一个弱化的Byzantine Generals Problem. 1982年, Leslie Lamport和另外两位科学家年发表了一篇论文阐述 [The Byzantine Generals Problem, ACM Transactions on Programming Languages and Systems,Volume 4 Issue 3, July 1982 Pages 382-401] 描述了更一般化的情况, 这种情况下不仅是网络会有故障, 节点本身也会有不按照逻辑执行的问题. 比如一个叛徒将军乱发消息或者不按照程序逻辑执行. 完整的拜占庭将军问题更加复杂, 必须加以特定场景的假设才能解决, 比如同步网络. 这个问题比较复杂, 本文只是简要介绍一下.
+前面提到的Two General Paradox实际上是一个弱化的Byzantine Generals Problem. 1982年, Leslie Lamport和另外两位科学家年发表了一篇论文阐述 "The Byzantine Generals Problem"[4]描述了更一般化的情况, 这种情况下不仅是网络会有故障, 节点本身也会有不按照逻辑执行的问题. 比如一个叛徒将军乱发消息或者不按照程序逻辑执行. 完整的拜占庭将军问题更加复杂, 必须加以特定场景的假设才能解决, 比如同步网络. 这个问题比较复杂, 本文只是简要介绍一下.
 
 在同步网络中, 有3f+1个节点, 如果故障节点不超过f个, 那么这个问题是可以解决的. 我们这里不做严格证明, 但是可以简单解释一下原因.
 
@@ -114,9 +114,9 @@ Two Generals Paradox在1975年被提出[Some Constraints and Trade-offs in the D
 
 # FLP Impossibility, 1985
 
-分布式事务作为Consensus类型问题, 在异步网络中非常难实现. 很多科学家们做了很多伟大的尝试, 包括2PC, 3PC, 等等, 但是1985年的时候, 一个重要的论文告诉了我们答案, 这就是著名的FLP Impossibility:
+分布式事务作为Consensus类型问题, 在异步网络中非常难实现. 很多科学家们做了很多伟大的尝试, 包括2PC, 3PC, 等等, 但是1985年的时候, 一个重要的论文告诉了我们答案, 这就是著名的FLP Impossibility:[5]
 
->   No completely asynchronous consensus protocol can tolerate even a single unannounced process death. [ Impossibility of Distributed Consensus with One Faulty Process, Journal of the Association for Computing Machinery, Vol. 32, No. 2, April 1985]
+>   No completely asynchronous consensus protocol can tolerate even a single unannounced process death.
 
 在异步网络环境中只要有一个故障节点, 任何Consensus算法都无法保证正确结束. (这里unannounced process death是指一个进程停止工作了但是其它节点不知道, 其它节点认为是消息延迟或者这个进程特别慢. FLP假设没有拜占庭的故障节点, 那种情况过于困难, 故障在这里的定义是指进程停止尝试读取消息, 相当于crash-stop).
 
@@ -145,7 +145,7 @@ Saga这种方法并不适合所有的情况, 它也不是银弹, 但是它是比
 
 Consensus主要目的是屏蔽掉故障节点的噪音让整个系统正常运行下去, 比如选举过程和状态机复制. 所以Consensus问题对于agreement条件做了放松, 它接受不一致是常态的事实, 既然我无法知道某些节点是挂了还是暂时联系不到, 那我只要关心正确响应的节点, 只要表决能过半即可, 过半表决意味着虽然没有完全一致, 但是”投票结果”被过半成员继承下来了, 这是因为任何两个quorum一定会存在交集(想象一下有A/B/C三个节点, 两个quorum比如AB和AC一定会有A是交集), 所以不管有多少个quorum存在, 我们能确保他们一定会有交集, 所以他们一定能信息互通而最终达成一致, 其他没有达成一致的成员将来在网络恢复后也可以和这部分交集内的节点传播出去的”真理”达成一致.
 
-接下来我们会介绍一下大名鼎鼎的Paxos算法. Paxos是第一个正确实现适用于分布式系统的Consensus算法. 1990年Lamport提出了这个算法, 但有趣的是ACM TOCS的评审委员们没看懂他的论文, 主编建议他不要拿古希腊神话什么长老被砸健忘了的故事写论文, 要他用数学语言写简洁点, Lamport也是个人才, 他拒绝修改论文, 并在一次会议上公开质疑”为什么搞基础理论的人一点幽默感都没有呢?”. 6年光阴过去, 另外一个超级牛人, 图灵奖获得者Butler Lampson看到这篇论文, 而且…… 他看懂了! Lampson觉得这个算法很重要并呼吁大家重新审视这篇重要论文, 后来提出FLP理论的三人组其中的Nacy Lynch重写了篇文章阐述这篇论文, 后来终于大家都看懂了, 最终1998年ACM TOCS终于发表了这篇论文 [The Part-Time Parliament. ACM Transactions on Computer Systems 16, 2 (May 1998), 133-169], 至此将近9年了. 最爆笑得是1998发表的时候, 负责编辑的Keith配合Lamport的幽默写的注解, 这里我给八卦一下省的你去翻论文了:
+接下来我们会介绍一下大名鼎鼎的Paxos算法. Paxos是第一个正确实现适用于分布式系统的Consensus算法. 1990年Lamport提出了这个算法, 但有趣的是ACM TOCS的评审委员们没看懂他的论文, 主编建议他不要拿古希腊神话什么长老被砸健忘了的故事写论文, 要他用数学语言写简洁点, Lamport也是个人才, 他拒绝修改论文, 并在一次会议上公开质疑”为什么搞基础理论的人一点幽默感都没有呢?”. 6年光阴过去, 另外一个超级牛人, 图灵奖获得者Butler Lampson看到这篇论文, 而且…… 他看懂了! Lampson觉得这个算法很重要并呼吁大家重新审视这篇重要论文, 后来提出FLP理论的三人组其中的Nacy Lynch重写了篇文章阐述这篇论文, 后来终于大家都看懂了, 最终1998年ACM TOCS终于发表了这篇论文 "The Part-Time Parliament"[6], 至此将近9年了. 最爆笑得是1998发表的时候, 负责编辑的Keith配合Lamport的幽默写的注解, 这里我给八卦一下省的你去翻论文了:
 
 >    本文最近刚被从一个文件柜里发现, 尽管这篇论文是很久之前提交的但是主编认为还是值得发表的(不是我们ACM TOCS过去没看懂, 是忘记发表了). 但是由于作者目前在希腊小岛上考古, ACM TOCS联系不上这位考古学家, 所以任命我来发表这篇论文(其实是Lamport拒绝修改论文, 不鸟ACM TOCS了). 作者貌似是个对计算机科学稍微有点兴趣的考古学家(赤裸裸的吐槽), 尽管他描述的Paxon岛上民主制度的故事对计算机科学家没啥兴趣, 但是但是这套制度对于在异步网络中实现分布式系统到时很好的模型(这句总算客观了). 建议阅读的时候直接看第四节(跳过前三节神话故事), 或者最好先别看(你可能会看不懂), 最好先去看看Lampson或者De Prisco对这篇论文的解释.
 
@@ -191,7 +191,7 @@ Paxos设计的时候把异步网络的不确定性考虑在内, 放松了livenes
 
 # Uniform Consensus
 
-对于Consensus问题, 我们只关注非故障节点的一致性和整体系统的正常, 而Uniform Consensus中要求无论是非故障节点还是故障节点, 他们都要一致, 比如在分布式事务的前后, 各个节点必须一致, 故障节点恢复后也要一致, 任何时刻都不应该有两个参与者一个决定提交, 一个决定回滚. 很长一段时间内大多数人没有把Uniform Consensus单独分类, 直到2001年才有人提出Uniform Consensus更难. [Uniform Consensus is Harder Than Consensus, Charron-Bost, Schiper, Journal of Algorithms 51 2004 15-37]
+对于Consensus问题, 我们只关注非故障节点的一致性和整体系统的正常, 而Uniform Consensus中要求无论是非故障节点还是故障节点, 他们都要一致, 比如在分布式事务的前后, 各个节点必须一致, 故障节点恢复后也要一致, 任何时刻都不应该有两个参与者一个决定提交, 一个决定回滚. 很长一段时间内大多数人没有把Uniform Consensus单独分类, 直到2001年才有人提出Uniform Consensus更难[7].
 
 一般的Consensus问题通常用来解决状态机复制时容错处理的问题, 比如Paxos, 而Uniform Consensus所处理的是分布式事务这样的问题, 在Uniform Consensus中我们要求所有节点在故障恢复后都要达成一致. 所以Uniform Consensus的定义在agreement上更加严格:
 
@@ -202,3 +202,12 @@ Paxos设计的时候把异步网络的不确定性考虑在内, 放松了livenes
 # 小结
 
 至此, 通过对Concensus问题的介绍, 我们对Linearizability和Sequential Consistency的应用应该有了更深入的理解, 在本系列下一篇文章中我们将会介绍性能更好但是一致性要求更低的Causal Consistency, PRAM以及不需要硬件自动同步的一致性模型, 比如Weak Consistency. 敬请期待. 文中的错误请通过电子邮箱daniel.y.woo@gmail.com发送给我, 因为微信不能更新已经发布的文章, 所以我会在<a href="https://danielw.cn">danielw.cn</a>更新.
+
+# 参考
+[1] Jim Gray. "Notes on data base operating systems" *In Operating Systems: An Advanced Course, R. Bayer, R. M. Graham, and G. Seegmuller, Eds. Lecture Notes in Comp*
+[2] Dale Skeen. "Nonblocking commit protocols" *SIGMOD '81 Proceedings of the 1981 ACM SIGMOD international conference on Management of data*
+[3] E. A. Akkoyunlu, K. Ekanadham, R. V. Huber. "Some constraints and tradeoffs in the design of network communications" *SOSP '75 Proceedings of the fifth ACM symposium on Operating systems principles*
+[4] Leslie Lamport, Robert Shostak, Marshall Pease. "The Byzantine Generals Problem" *ACM Transactions on Programming Languages and Systems (TOPLAS), Volume 4 Issue 3, July 1982*
+[5] Michael J. Fischer,	Nancy A. Lynch, Michael S. Paterson. "Impossibility of Distributed Consensus with One Faulty Process" *Journal of the Association for Computing Machinery, Vol. 32, No. 2, April 1985*
+[6] Leslie Lamport. "The Part-Time Parliament" *ACM Transactions on Computer Systems 16, 2 (May 1998), 133-169*
+[7] Bernadette Charron-Bost, André Schipe. "Uniform Consensus is Harder Than Consensus" *Journal of Algorithms Volume 51 Issue 1, April 2004*

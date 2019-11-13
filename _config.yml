@@ -13,3 +13,5 @@ permalink: "/:title"
 google_analytics: "UA-67268519-1"
 show_downloads: false
 theme: jekyll-theme-tactile
+# prepare to publish
+future: true

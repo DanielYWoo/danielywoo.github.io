@@ -1,17 +1,43 @@
 ---
 layout: post
 title:  "分布式系统一致性的发展历史 (三)"
-date:   2019-11-3 11:18:00
-published: false
+date:   2019-12-30 11:18:00
 ---
 
 至此我们已经介绍过Sequential Consistency, Linearizability和他们的应用, 拜占庭将军问题和FLP理论. 这些模型相对而言比较严格, 导致在实现的时候遇到了很多性能问题, 实际在应用中, 除了一些关键事件需要Sequential Consistency或者Linearizability之外, 大多数情况下我们是不需要这么严格的一致性的, 因为全局的偏序关系会很大程度的影响并发. 而我们工程中有很多场景下对于一致性要求没有这么高, 所以九十年代前后又出现了一些新的不太严格的一致性模型.
 
-本篇文章里我会介绍三个一致性模型: PRAM Consistency, Weak Consistency和Causal Consistency. 为了更容易理解, 我不按照时间顺序讲, 我会按照从严格到宽松的顺序讲述.
+本篇文章里我会介绍三个一致性模型: PRAM Consistency, Weak Consistency和Causal Consistency.
+
+# PRAM, 1988
+
+PRAM是Pipelined RAM的缩写. Princeton大学的Richard Lipton和Jonathan Sandberg在1988年的一篇论文中第一次定义了PRAM 的一致性模型[[1]](#参考).
+
+当时的计算机一般是CRAM模式(Coherent Memory System), 这样的系统对于程序员来讲非常友好, 但是由于操作在总线上会阻塞所以性能很差, 任何优化都会导致硬件设计很复杂, 使硬件成本居高不下. 而PRAM非常简单, 进程不再关心写和后继的读操作的因果关系, 所有的写操作都在彼此独立的pipeline里, 因此任何一个进程观察到的某个进程上的写是一致有序的. 但是这不意味着所有进程的写都有一个全局顺序. 举个例子
+
+<img src="/images/2019-11-30/PRAM-1.png" max-height="500px">
+
+这个例子中P3 P4 P5看到的P1和P2上的对同一个变量x的写入顺序是不同的，但是如果只看P1对x对写入顺序，大家观点都是一样对，如果只看P2对x对写入也都是一样对，所以这是符合PRAM一致性的。但是对于P6，他对P1对x对写入顺序观点是违反了P1的program order的，所以P6的存在是不满足PRAM的。
+
+再举一个例子来说明PRAM比SC要求弱化在哪里。
+
+<img src="/images/2019-11-30/PRAM.png" max-height="500px">
+
+这个例子不是Linearizability因为W(x)1和W(x)2在P4上顺序不对. 然后也不是Sequential Consistency因为P3和P4不一致, 然后也不是Causal Consistency因为W(x)1和W(x)2是有casual relation但是P4不遵循(稍后讲). 但是, 这个是符合PRAM的, 因为W(x)1和W(x)2在两个不同进程上, 所以不需要有全局先后顺序. 简单讲, PRAM模型下每个节点的处理是在其他节点看来一致的, 但不考虑节点之间的处理依赖. 这是一个非常简单的模型, 但是适用场景比较有限，它假设P之间不存在处理的依赖关系。比如Kafka在每个partition上消息有序，但是在整个topic上是无序的.
 
 
 # Causal Consistency 1993
-工程实现中, 实际上大多数事件之间没有任何因果关系的, 比如facebook上两个朋友可以并发的没有任何关联和依赖的两个消息, 其他用户的feed里看到这两个人的消息谁先谁后并不重要, 我干嘛要关心他们的全序关系, 我只要关注有因果关系的事件其实就足够了. 但是如果A发了一个消息, 然后B回复了这个消息, 这两个事件就有casual关系了, 其他人接受到的这两个事件一定是有顺序的. 我们称这个因果关系叫做”causally related”, 与之对应的一致性模型叫做”Causal Consistency”, 这个模型是1993年由乔治亚理工学院的一批科学家提出的[[1]](#参考), 但是它的核心思想已经在更早的Leslie Lamport的那篇著名论文"Time, clocks, and the ordering of events in a distributed system"中已经描述过了, 只是Lamport Clock是potential causally related. 而Causal Consistency更加系统的定义了causally related.
+PRAM有些时候不能很通用，因为现实工程实现中，有时候P之间还是需要有因果关系的，有的可能有很多因果关系，比如金融系统，有的可能虽然有，但是比例低一些。如果是后者，那么Causal Consistency可能是一个性能上比较好的选择。
+
+举个例子，facebook上两个朋友可以并发的没有任何关联和依赖的两个消息, 其他用户的feed里看到这两个人的消息谁先谁后并不重要, 我不需要关心他们的全序关系. 但是如果A发了一个消息, 然后B回复了这个消息, 这两个事件就有casual关系了, 其他人接受到的这两个事件一定是有顺序的. 我们称这个因果关系叫做”causally related”, 与之对应的一致性模型叫做”Causal Consistency”, 这个模型是1993年由乔治亚理工学院的一批科学家提出的[[1]](#参考), 但是它的核心思想已经在更早的Leslie Lamport的那篇著名论文"Time, clocks, and the ordering of events in a distributed system"中已经描述过了, 只是Lamport Clock是potential causally related. 而Causal Consistency更加系统的定义了causally related.
+
+在这篇论文中作者回顾了Sequential Consistency 和PRAM Consistency然后提出了介于二者之间的一个模型，定义如下：
+
+* L<sub>i</sub>: 某个进程Pi的本地执行历史
+* o<sub>1</sub> &gt; o<sub>2</sub>: 在某个Pi上操作o<sub>1</sub>在program order上早于o<sub>2</sub>
+* H: {L<sub>1</sub>, L<sub>2</sub> .... }的集合。
+
+那么对于SC来说，所有的Pi都应该可以看到一个一样的序列化S，其中满足所有的program order。而对于稍后会提及的PRAM来讲，每个Pi都会有自己的S<sub>i</sub>, 并且所有的S<sub>i</sub>
+
 
 在一个分布式系统中, Causal Consistency就是”reads respect the order of causally related writes”. 这个定义的关键在于什么是causally related, 两个读写操作之间怎样才算是有潜在的因果关系. Leslie Lamport的Lamport Clock是最早尝试解决Causal Consistency的方法, 后来出现的Vector Clock是应用最为广泛的一个算法. 这要追溯到1991年的一篇论文 [Lightweight Causal and Atomic Group Multicast, ACM Transactions on Computer Systems, Vol. 9, No. 3, August 1991]. 三位作者在开发ISIS分布式系统的时候实现的causally ordered message 广播系统CBCAST, 来实现了四种常见的分布式系统消息广播模型. 我们这里不具体到这四种模型, 但是我们通过介绍CBCAST协议的基础 – Vector Clock, 来阐述什么是causally related.
 
@@ -30,13 +56,13 @@ Vector Clock可以很好地找出消息之间是否有潜在的因果关系, 如
 
 举个例子, 一个系统中有三个进程, 其中P1, P2同时分别发出一个消息m1和m2. 那么VT(m1) = (1, 0, 0), VT(m2) = (0, 1, 0). 如果P3收到了这两个消息m1, m2, 那么P3会得到VT(P3) = (1, 1, 0), 而且P3认为m1和m2不是causally related, m1和m2是两个并发写, 顺序无关.
 
-<img src="/images/2015-11-25/c2.png" max-height="500px">
+<img src="/images/2019-11-30/c2.png" max-height="500px">
 
 如果P3收到了m1和m2, 那么不管m1/m2谁先到达都无所谓. Causal consistency不要求全局历史, 不关心并发写的顺序, 所以性能会比Linearizabiltiy好很多. 而且顺序也不需要全局一致, 比如这种情况下, P3如果读操作读到m1, 是P1的写, 那么是符合causal consistency的, 如果还有一个P4读到了m2, 那么P4的读和P2的写也是符合causal consistency的. P3和P4允许有不同的观点, 但是都是正确的.
 
 如果像下面这样P1发了消息m1, 然后P2收到m1之后P2再发出m2, 那么m1和m2就是潜在的causally related messages.
 
-<img src="/images/2015-11-25/c3.png" max-height="500px">
+<img src="/images/2019-11-30/c3.png" max-height="500px">
 
 Vector Clock就应该能检测到这种情况. 以下是过程: P2收到m1的VT(m1) = (1, 0, 0), 此时VT(P2) = (0, 0, 0), 然后合并结果为 VT(P2) = (1, 0, 0), 这时候如果P2再发出m2, 那么VT(m2) = (1, 1, 0). P3如果同时收到了m1和m2, P3就可以发现VT(m1) < VT(m2), 因为(1, 0, 0) < (1, 1, 0).
 
@@ -54,23 +80,13 @@ Riak中保证Causal Consistency其实就是Conflict Resolution. 如果客户端�
 
 Causal Consistency因为只约束有因果关系的写和读, 对于不是causally related writes是不关心顺序的, 比如Vector Clock中没有任何操作是悲观阻塞的, 也不像Paxos那样要多个回合, 所以Causal Consistency的实现通常性能比较好. 但是Vector Clock如果在进程数量特别多的时候会有膨胀效应, 尽管有一些对Vector Clock压缩的算法, 但是Vector Clock仍然不是非常适合大量进程的情况. 接下来我们介绍一个更弱更简单, 但是没有这个问题的一致性模型PRAM.
 
-# PRAM, 1988
-
-PRAM是Pipelined RAM的缩写. Princeton大学的Richard Lipton和Jonathan Sandberg在1988年的一篇论文中第一次定义了PRAM 的一致性模型[[1]](#参考).
-
-当时的计算机一般是CRAM模式(Coherent Memory System), 这样的系统对于程序员来讲非常友好, 但是由于操作在总线上会阻塞所以性能很差, 任何优化都会导致硬件设计很复杂, 使硬件成本居高不下. 而PRAM非常简单, 进程不再关心写和后继的读操作的因果关系, 所有的写操作都在彼此独立的pipeline里, 因此任何一个进程观察到的某个进程上的写是一致有序的. 但是这不意味着所有进程的写都有一个全局顺序. 举个例子
-
-<img src="/images/2015-11-25/PRAM.png" max-height="500px">
-
-这个例子中首先明显不是Linearizability因为W(x)1和W(x)2在P4上不对. 然后也不是Sequential Consistency因为P3和P4不一致, 然后也不是Causal Consistency因为W(x)1和W(x)2是有casual relation但是P4不遵循. 但是, 这个是符合PRAM的, 因为W(x)1和W(x)2在两个不同进程上, 所以不需要有先后顺序. 简单讲, PRAM模型下每个节点的处理是在其他节点看来一致的, 但不考虑节点之间的处理依赖. 这是一个非常简单的模型.:wq
-
 # Weak Consistency, 1986 – 1989
 PRAM出现之后还出现了更为宽松的Weak Consistency. 目前包括PRAM在内我们所有介绍过的一致性模型都是系统自动同步的, 而Weak Consistency不是.
 1986年Dubois, Scheurich和Briggs发表了论文[Memory Access Buffering in Multi-processors]提及到了在多路处理器中weak ordering的概念. 1989年Adve和Hill的论文中再次定义了Weak Consistency[Weak Ordering – A New Definition], 作者认为Weak Consistency应该是软件和硬件的一个契约, 硬件本身不支持Sequential Consistency但是开发人员的软件可以利用硬件的能力, 通过软件的同步指令实现Sequential Consistency, 这点不用于之前介绍过的一致性模型.
 
 还记得我们之前介绍Sequential Consistency的时候提到的reordering和memory fence的介绍么? 在Sequential Consistency被定义的时候, 科学家们设计的模型是每个指令都要由硬件去保证顺序和同步, 但是性能会很糟糕, 所以我们今天几乎没有任何一款处理器会在硬件自动提供这样的一致性. Weak Consistency说白了就是硬件提供Memory Fence这样的指令, 让开发人员自己在软件中去发送指令, 然后硬件可以理解这样的指令并同步内存. 在下图中, reordering不能跨越fence就可以了.
 
-<img src="/images/2015-11-25/weak-ordering.png" max-height="500px">
+<img src="/images/2019-11-30/weak-ordering.png" max-height="500px">
 
 在分布式系统中, 一个fence相当于一个flush的概念, 目的就是把write buffer内的内容批量flush出去.
 
@@ -102,5 +118,5 @@ PRAM: 所有进程互相看到的写无序, 除非两个写来自一个进程 (�
 在本系列下一篇文章中, 我们将会换个全新的思路去看Eventual Consistency和CAP理论.
 
 # 参考
-1. Mustaque Ahamad, Gil Neiger, James E. Burns, Prince Kohli, Phillip W. Hutto. "Causal memory: definitions, implementation, and programming" *Distributed Computing, 9(1):37–49, 1995*
-2. Richard J Lipton and Jonathan S Sandberg. "PRAM: A scalable shared memory" *Princeton University, Department of Computer Science, 1988.*
+1. Richard J Lipton and Jonathan S Sandberg. "PRAM: A scalable shared memory" *Princeton University, Department of Computer Science, 1988.*
+2. Mustaque Ahamad, Gil Neiger, James E. Burns, Prince Kohli, Phillip W. Hutto. "Causal memory: definitions, implementation, and programming" *Distributed Computing, 9(1):37–49, 1995*

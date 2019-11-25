@@ -72,11 +72,11 @@ Lamport在他的论文中举了一个例子, 下面的图中P/Q/R是三个进程
 
 图片来源: Time, Clocks, and the Ordering of Events in a Distributed System
 
-横向虚线就变成了全局的clock tick, 而每个进程的clock都是一致的. Lamport Clock的作用就是找到causally related关系, 之后1988年出现的Vector Clock[[2]](#参考)是一个更加实用的算法. 关于Vector Clock, Riak的工程师有两篇非常好的文章大家可以去看看Why Vector Clocks Are Easy 和 Why Vector Clocks Are Hard). 这里受制于篇幅此处不再详细描述, 在后继介绍Casual Consistency的时候会给大家详细介绍. 对于1978年这篇论文有兴趣的同学可以去检索 Time, Clock, and Ordering of Events  in a Distributed System. 这篇论文被认为是分布式系统的一致性问题的开山之作, 其中 max(Ci, Cj) + 1这个单调递增的timestamp后来影响了很多的设计, 比如Vector Clock, 比如一些Conflict-free Replicated Data Types, Paxos和Raft等. 这篇论文也是Leslie Lamport被引用最多的文章(截至2019年10月, 共计11574次), 按照Lamport自己的说法, 这篇论文影响了后人对于分布式系统的一致性问题的思考方式, 而后基于人们对一致性, 性能, 实现难度之间的平衡, 产生了很多不同的一致性模型.
+横向虚线就变成了全局的clock tick, 而每个进程的clock都是一致的. Lamport Clock的作用就是找到潜在的causally related关系, 之后1988年出现的Vector Clock[[2]](#参考)是一个具体实现的算法. 关于Vector Clock, Riak的工程师有两篇非常好的文章大家可以去看看Why Vector Clocks Are Easy 和 Why Vector Clocks Are Hard). 这里受制于篇幅此处不再详细描述, 在后继介绍Causal Consistency的时候会给大家详细介绍. 对于1978年这篇论文有兴趣的同学可以去检索 Time, Clock, and Ordering of Events  in a Distributed System. 这篇论文被认为是分布式系统的一致性问题的开山之作, 其中 max(Ci, Cj) + 1这个单调递增的timestamp后来影响了很多的设计, 比如Vector Clock, 比如一些Conflict-free Replicated Data Types, Paxos和Raft等. 这篇论文也是Leslie Lamport被引用最多的文章(截至2019年10月, 共计11574次), 按照Lamport自己的说法, 这篇论文影响了后人对于分布式系统的一致性问题的思考方式, 而后基于人们对一致性, 性能, 实现难度之间的平衡, 产生了很多不同的一致性模型.
 
 # 理想的一致性模型
 
-对于一致性, 我们需要不同的模型, 不同的级别. 理想的情况下任何事件都准确无误的"瞬时"对其他进程或者节点可见. 比如, 一个服务节点对某个状态的写入, 瞬时可以被另外一个服务器同步复制, 因为"瞬时"的要求, 即便是Lamport Clock本质上是个Logical Clock, 而非Physical Clock, 所以也达不到这个要求. 如果存在这样的模型, 我们不需要通过Logical Clock去找事件之间的因果关系(causality), 事件的结束时间就可以解决事件的全序关系了. 有人称作这种模型叫做strict consistency. 实际上, 这在现实世界上根本不存在这样理想的模型, 两个服务器无论是通过金属电路还是光学载体连接, 都会有传输延迟, 这是物理决定的, 物理时间在分布式系统中永远不可能同步, 因此我们对于一致性的时间要求必须降低, 比如Linearizability(strong consistency)或者Sequential consistency. 实际中我们经常比较关心两个有因果关系的事件的顺序而对于可以并行无因果关系的事件我们不太关心他们的顺序, 再考虑到并发能力和实现难度. 我们需要多种不同的一致性模型.
+对于一致性, 我们需要不同的模型, 不同的级别. 理想的情况下任何事件都准确无误的"瞬时"对其他进程或者节点可见. 比如, 一个服务节点对某个状态的写入, 瞬时可以被另外一个服务器同步复制, 因为"瞬时"的要求, 即便是Lamport Clock本质上是个Logical Clock, 而非Physical Clock, 所以也达不到这个要求. 如果存在这样的模型, 我们不需要通过Logical Clock去找事件之间的因果关系(causality), 事件的结束时间就可以解决事件的全序关系了. 有人称作这种模型叫做strict consistency. 实际上, 这在现实世界上根本不存在这样理想的模型( 除非完全串行化没有任何并发). 两个服务器无论是通过金属电路还是光学载体连接, 都会有传输延迟, 这是物理决定的, 物理时间在分布式系统中永远不可能同步, 因此我们对于一致性的时间要求必须降低, 比如Linearizability(strong consistency)或者Sequential consistency. 实际中我们经常比较关心两个有因果关系的事件的顺序而对于可以并行无因果关系的事件我们不太关心他们的顺序, 再考虑到并发能力和实现难度. 我们需要多种不同的一致性模型.
 
 # Sequential Consistency, 1979
 
@@ -223,7 +223,7 @@ Linearizability和Sequential Consistency你可以把它们想象成一个烧烤�
 
 至于Linearizability的实现, 可以说是所有一致性模型里最丰富的了, 我们会在本系列下一篇文章中介绍.
 
-如果你耐心看到这里了, 至此, 我们已经开了一个好头, 你一定是对分布式系统的一致性问题很感兴趣, 在本系列下一篇文章中我们将会提到Linearizability和Sequential Consistency的一些应用. 将来我们还会继续介绍Casual Consistency, PRAM, Eventual Consistency这些性能更好但是一致性更弱的模型, 所以, stay tuned!
+如果你耐心看到这里了, 至此, 我们已经开了一个好头, 你一定是对分布式系统的一致性问题很感兴趣, 在本系列下一篇文章中我们将会提到Linearizability和Sequential Consistency的一些应用. 将来我们还会继续介绍Causal Consistency, PRAM, Eventual Consistency这些性能更好但是一致性更弱的模型, 所以, stay tuned!
 
 
 # 参考

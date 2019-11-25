@@ -6,7 +6,7 @@ date:   2019-12-30 11:18:00
 
 至此我们已经介绍过Sequential Consistency, Linearizability和他们的应用, 拜占庭将军问题和FLP理论. 这些模型相对而言比较严格, 导致在实现的时候遇到了很多性能问题, 实际在应用中, 除了一些关键事件需要Sequential Consistency或者Linearizability之外, 大多数情况下我们是不需要这么严格的一致性的, 因为全局的偏序关系会很大程度的影响并发. 而我们工程中有很多场景下对于一致性要求没有这么高, 所以九十年代前后又出现了一些新的不太严格的一致性模型.
 
-本篇文章里我会介绍三个一致性模型: PRAM Consistency, Weak Consistency和Causal Consistency.
+本篇文章里我会介绍三个一致性模型: PRAM Consistency, Causal Consistency和Weak Consistency.
 
 # PRAM, 1988
 
@@ -20,26 +20,32 @@ PRAM是Pipelined RAM的缩写. Princeton大学的Richard Lipton和Jonathan Sandb
 
 再举一个例子来说明PRAM比SC要求弱化在哪里。
 
-<img src="/images/2019-11-30/PRAM.png" max-height="500px">
+<img src="/images/2019-11-30/PRAM-2.png" max-height="500px">
 
-这个例子不是Linearizability因为W(x)1和W(x)2在P4上顺序不对. 然后也不是Sequential Consistency因为P3和P4不一致, 然后也不是Causal Consistency因为W(x)1和W(x)2是有casual relation但是P4不遵循(稍后讲). 但是, 这个是符合PRAM的, 因为W(x)1和W(x)2在两个不同进程上, 所以不需要有全局先后顺序. 简单讲, PRAM模型下每个节点的处理是在其他节点看来一致的, 但不考虑节点之间的处理依赖. 这是一个非常简单的模型, 但是适用场景比较有限，它假设P之间不存在处理的依赖关系。比如Kafka在每个partition上消息有序，但是在整个topic上是无序的.
+这个例子不是Linearizability因为W(x)1和W(x)2在P4上顺序不对. 然后也不是Sequential Consistency因为P3和P4不一致, 然后也不是Causal Consistency因为W(x)1和W(x)2是有causal relation但是P4不遵循(稍后讲). 但是, 这个是符合PRAM的, 因为W(x)1和W(x)2在两个不同进程上, 所以不需要有全局先后顺序. 简单讲, PRAM模型下每个节点的处理是在其他节点看来一致的, 但不考虑节点之间的处理依赖. 这是一个非常简单的模型, 但是适用场景比较有限，它假设P之间不存在处理的依赖关系。比如Kafka在每个partition上消息有序，但是在整个topic上是无序的.
 
 
-# Causal Consistency 1993
-PRAM有些时候不能很通用，因为现实工程实现中，有时候P之间还是需要有因果关系的，有的可能有很多因果关系，比如金融系统，有的可能虽然有，但是比例低一些。如果是后者，那么Causal Consistency可能是一个性能上比较好的选择。
+# Causal Consistency 1991
+PRAM的模型只能用于一致性要求比较弱, 没有进程间因果关系的场景中. 工程实现中很多时候P之间还是需要有因果关系的。举个例子，facebook上两个朋友可以并发的发出没有任何关联和依赖的两个独立的消息, 其他用户的feed里看到这两个人的消息谁先谁后并不重要, 我不需要关心他们的全序关系. 但是如果A发了一个消息, 然后B回复了这个消息, 这两个事件就有causal关系了, 其他人接受到的这两个事件一定是有顺序的. 我们称这个因果关系叫做”causally related”, 与之对应的一致性模型叫做”Causal Consistency”, 这个模型是1991年由乔治亚理工学院的一批科学家提出的[[2]](#参考), 但是它的核心思想已经在更早的Leslie Lamport的那篇著名论文"Time, clocks, and the ordering of events in a distributed system"中已经描述过了, 只是Lamport Clock是告诉我们potentially causally related事件如何按照一个全局的Logical Clock得到偏序集, 并没有提出一个一致性模型.
 
-举个例子，facebook上两个朋友可以并发的没有任何关联和依赖的两个消息, 其他用户的feed里看到这两个人的消息谁先谁后并不重要, 我不需要关心他们的全序关系. 但是如果A发了一个消息, 然后B回复了这个消息, 这两个事件就有casual关系了, 其他人接受到的这两个事件一定是有顺序的. 我们称这个因果关系叫做”causally related”, 与之对应的一致性模型叫做”Causal Consistency”, 这个模型是1993年由乔治亚理工学院的一批科学家提出的[[1]](#参考), 但是它的核心思想已经在更早的Leslie Lamport的那篇著名论文"Time, clocks, and the ordering of events in a distributed system"中已经描述过了, 只是Lamport Clock是potential causally related. 而Causal Consistency更加系统的定义了causally related.
+下面简单介绍一下Causal Consistency的模型, 在这篇论文中[[2]](#参考)作者回顾了Sequential Consistency和PRAM Consistency然后提出了介于二者之间的一个Causal Consistency模型，定义如下：
 
-在这篇论文中作者回顾了Sequential Consistency 和PRAM Consistency然后提出了介于二者之间的一个模型，定义如下：
-
+* 基本模型类似于Herlichy &amp; Wing 在定义Linearizability中用到的FIFO模型 [[3]](#参考)
 * L<sub>i</sub>: 某个进程Pi的本地执行历史
 * o<sub>1</sub> &gt; o<sub>2</sub>: 在某个Pi上操作o<sub>1</sub>在program order上早于o<sub>2</sub>
 * H: {L<sub>1</sub>, L<sub>2</sub> .... }的集合。
 
-那么对于SC来说，所有的Pi都应该可以看到一个一样的序列化S，其中满足所有的program order。而对于稍后会提及的PRAM来讲，每个Pi都会有自己的S<sub>i</sub>, 并且所有的S<sub>i</sub>
+那么对于Linearizability Consistency和Sequential Consistency来说，所有的Pi都应该可以看到一个一样的序列化S, 是H中所有操作的total order，并且满足所有的L<sub>i</sub>中的program order。
 
+而对于前面介绍的PRAM来讲，每个Pi都会有自己的S<sub>i</sub>, 并不会有一个全局的唯一的S, 并且所有的S<sub>i</sub>中的写操作也不是全局有序,只是在同一个进程Pi中的写之间全局有序.
 
-在一个分布式系统中, Causal Consistency就是”reads respect the order of causally related writes”. 这个定义的关键在于什么是causally related, 两个读写操作之间怎样才算是有潜在的因果关系. Leslie Lamport的Lamport Clock是最早尝试解决Causal Consistency的方法, 后来出现的Vector Clock是应用最为广泛的一个算法. 这要追溯到1991年的一篇论文 [Lightweight Causal and Atomic Group Multicast, ACM Transactions on Computer Systems, Vol. 9, No. 3, August 1991]. 三位作者在开发ISIS分布式系统的时候实现的causally ordered message 广播系统CBCAST, 来实现了四种常见的分布式系统消息广播模型. 我们这里不具体到这四种模型, 但是我们通过介绍CBCAST协议的基础 – Vector Clock, 来阐述什么是causally related.
+对于Causal Consistency来说, 每个Pi都有自己的S<sub>i</sub>, 但是所有的causally related的写操作是全局有序的. 这就是Causal Consistency和PRAM的区别.
+
+注意一点, Causal Consistency的模型中的causally related是指潜在的, 实际业务中是否真的是causally related是要看具体情况的. 因为Causal Consistency和这个系列文章中目前所出现的所有模型一样都是自动化的模型,不需要开发人员介入,所以模型看到P<sub>1</sub> W(x)1, P<sub>2</sub> R(x)1, P<sub>2</sub> W(x)2, 模型只能假设他们之间是causally related, 而实际上P<sub>2</sub>的写入尽管按照program order发生在读取之后, 但是这个写入是否是基于前一步读取的结果, 这个取决于业务, 只有开发人员和程序知道是否二者有依赖或者因果关系, 系统只能把这种potentially causally related当做causally realted才能自动满足Causal Consistency. 如果要更加精细控制, 就要引入开发人员自己在程序中手动控制了, 后面的Weak Consistency就是一个需要手动控制的模型.
+
+通俗一点讲, 在一个分布式系统中, Causal Consistency就是”reads respect the order of causally related writes”. 这个定义的关键在于什么是causally related, 两个读写操作之间怎样才算是有潜在的因果关系. Leslie Lamport的Lamport Clock是最早尝试发现Causal Consistency的方法, 后来出现的Vector Clock是应用最为广泛的一个实现Causal Consistency的算法. 
+
+Vector Clock的出现要追溯到1988年的一篇论文[[4]](#参考)(早于1991年Causal Consistency模型的出现). 三位作者在开发ISIS分布式系统的时候实现的causally ordered message 广播系统CBCAST, 来实现了四种常见的分布式系统消息广播模型. 我们这里不具体到这四种模型, 但是我们通过介绍CBCAST协议的基础 – Vector Clock, 来阐述什么是causally related.
 
 他们的协议如何辨别causally related messages呢? 严格的数学定义比较晦涩, 但是我们可以通过Colin Fidge和Friedemann Mattern两人独立发现的Vector Clock来解释.
 
@@ -120,3 +126,7 @@ PRAM: 所有进程互相看到的写无序, 除非两个写来自一个进程 (�
 # 参考
 1. Richard J Lipton and Jonathan S Sandberg. "PRAM: A scalable shared memory" *Princeton University, Department of Computer Science, 1988.*
 2. Mustaque Ahamad, Gil Neiger, James E. Burns, Prince Kohli, Phillip W. Hutto. "Causal memory: definitions, implementation, and programming" *Distributed Computing, 9(1):37–49, 1995*
+3. Herlihy, Maurice P.; Wing, Jeannette M. (1987). "Axioms for Concurrent Objects". *Proceedings of the 14th ACM SIGACT-SIGPLAN Symposium on Principles of Programming Languages, POPL '87. p. 13*
+4. Kenneth Birman, Andre Schiper, Pat Stephenson. "Lightweight Causal and Atomic Group Multicast" *ACM Transactions on Computer Systems, Vol. 9, No. 3, August 1991*
+5. Colin J. Fidge. "Timestamps in Message-Passing Systems That Preserve the Partial Ordering" *In K. Raymond (ed.). Proc. of the 11th Australian Computer Science Conference (ACSC'88). pp. 56–66.*
+6. Mattern, F. "Virtual Time and Global States of Distributed Systems" *In Cosnard, M. (ed.), Proc. Workshop on Parallel and Distributed Algorithms, 1998, Chateau de Bonas, France: Elsevier, pp. 215–226*

@@ -83,15 +83,15 @@ Let C be a bivalent configuration of P, and let e=(p, m) be an event that is app
 这是整个证明的核心部分, 这部分比较难理解.
 首先C不是initial configuration了, C可能是某个中间过程的configuration, 然后C是bivalent的. 假设e=(p, m)这个消息是可以应用于C的, 那么不用e所能达到的所有configuration应该是一幅图. 这个图就是Ɛ. Ɛ内任何一个configuration再用e就跳出Ɛ, 并得到了一个集合Ɗ. 每一个'Ɛ边界'上的configuration就是E, 因而有D=e(E).
 
-如果把e用于Ɛ中某一个configuration, 那么相当于Ɛ中离起始的C越远的configuration收到e越晚, e越被延迟. 由于我们定义了Ɛ不含e, 所以e只会发生在Ɛ的边界上, 实际上就是把e延迟成为离开Ɛ进入Ɗ的最后一个消息. e会把Ɛ内每一个configuration映射到Ɗ 中一个configuration.也就是说，我们可以推断出，从C到Ɗ之间，接收了两个事件；其中第二个事件就是e。
+如果把e用于Ɛ中某一个configuration, 那么相当于Ɛ中离起始的C越远的configuration收到e越晚, e越被延迟. 由于我们定义了Ɛ不含e, 所以e只会发生在Ɛ的边界上, 实际上就是把e延迟成为离开Ɛ进入Ɗ的最后一个消息. e会把Ɛ内每一个configuration映射到Ɗ 中一个configuration.
 
 我们要证明Ɗ包含bivalent configuration, 我们反证它. 假设D没有bivalent configuration, 那么Ɗ只能包含0-valent和1-valent. 也就是说e会把Ɛ中每一个边界的configuration变为(映射为)Ɗ 中的一个0-valent或者1-valent configuration. 按照这个思路, 因为C是bivalent, 所以一定会同时存在E0和E1分别是0-valent和1-valent，从C可达E0和E1. 接下来分两种情况分析:
 
-如果E0还没有收到e, 那么E0属于Ɛ, 那么E0收到e之后会变成F0. F0明显是0-valent（E0是0-valent的，因为参考lemma 2的证明，如果F0变为1-valent的话，则只存在一种可能即事件e的消息是1，假设e事件接受消息的进程p故障，则F0可能变为bivalent。但是Ɗ不包含bivalent configuration，故F0只可能是0-valent。综上所述，我们可以推出若configuration是n-valent的，那么其在接收事件e以后的子configuration也一定是n-valent的，即决策值已经确定。）并且属于Ɗ. 同样, 如果E1还没有收到e, 也会有F1属于Ɗ.
+如果E0还没有收到e, 那么E0属于Ɛ, 那么定义E0收到e以后的configuration为F0. F0明显是0-valent（E0是0-valent的，因为参考lemma 2的证明，如果F0变为1-valent的话，则只存在一种可能即事件e的消息是1，假设e事件接受消息的进程p故障，则F0可能变为bivalent。但是Ɗ不包含bivalent configuration，故F0只可能是0-valent。综上所述，我们可以推出若configuration是n-valent的，那么其在接收事件e以后的子configuration也一定是n-valent的，即决策值已经确定。）并且属于Ɗ. 同样, 如果E1还没有收到e, 也会有F1属于Ɗ.
 
 如果E0已经收到过e, 那么E0不属于Ɛ, 由于e是最后一个消息, 所以必然存在于Ɛ边界上一个configuration收到e之后变成F0进入Ɗ, 然后F0可能经过收到其他消息最终变成E0. 根据反证假设, F0必须是0-valent. 类似的, 如果E1还没有收到e, 也会有F1属于Ɗ, 并且F1可以变成E1.
 
-这两种情况下总是有一个E和F可以通过一个消息变成对方. 因为C是bivalent, 所以一定同时存在E0/E1, 那也就同时存在F0/F1. 所以由反证假设可以得出结论: Ɗ总是同时包含0-valent和1-valent.
+这两种情况下总是有一个E和F互相可达. 因为C是bivalent, 所以一定同时存在E0/E1, 那也就同时存在F0/F1. 所以由反证假设可以得出结论: Ɗ总是同时包含0-valent和1-valent.
 
 <img src="/images/2015-10-28/lemma3_sample.png" max-height="500px">
 

@@ -15,9 +15,9 @@ Consensus定义:
 2. agreement: 所有进程必须同意同一个值.
 3. validity: 最终达成一致的值必须是V1到Vn其中一个, 如果所有初始值都是vx, 那么最终结果也必须是vx.
 
-这里我们对于第二个条件, 我们弱化为只要有一个进程做出了决定即可.
+这里我们对于第二个条件, 我们弱化为只要有n-1个进程做出决定，达成一致即可，即允许有一个进程失败。
 
-首先, 排除Byzantine式故障. 消息系统是异步的, 但是任何消息都会被接收一次且仅一次, 并且无法伪造或者丢失. 这是比一般的异步网络更加可靠的一个网络模型. 这样收窄的一个模型如果不能有一个完全正确的consensus protocol, 那么一般的异步网络或者包含Byzantine故障的模型更不可能有正确的protocol. 这是完全正确(totally correct)是指同时满足safety和liveness. 在实际应用中, Paxos, Raft, PBFT都是保证safety但是不保证liveness的, 所以他们都不是完全正确的算法, 理论上存在进入无限循环的可能性(实际上概率非常低, 在工程中完全可以使用).
+首先, 排除Byzantine式故障. 消息系统是异步的, 但是任何消息都会被接收一次且仅一次, 并且无法伪造或者丢失，甚至容忍其中一个进程错误。这是比一般的异步网络更加可靠的一个网络模型. 这样收窄的一个模型如果不能有一个完全正确的consensus protocol, 那么一般的异步网络或者包含Byzantine故障的模型更不可能有正确的protocol. 这里完全正确(totally correct)是指同时满足safety和liveness. 在实际应用中, Paxos, Raft, PBFT都是保证safety但是不保证liveness的, 所以他们都不是完全正确的算法, 理论上存在进入无限循环的可能性(实际上概率非常低, 在工程中完全可以使用).
 
 关于异步网络和故障模型, 请参考<a href="https://danielw.cn/network-failure-models">https://danielw.cn/network-failure-models</a>.
 
@@ -28,13 +28,13 @@ Consensus protocol定义: 异步网络中的N个进程(N不小于2), 每个进�
 1. send(p, m): 把一个消息(p, m)放到message buffer中.
 2. receive(p): p从message buffer删除并取得消息值m, 或者返回null. 前者表示消息被接收到, 如果message buffer为空后者表示没有p的消息, 如果message buffer不为空表示p的消息传输被延迟. 注意, p的消息被延迟的次数有上限, 任何消息最终都会被收到.
 
-一个configuration(状态)就是指所有进程的内部状态和message buffer状态. 整个系统总是从一个configuration变化为另外一个configuration. 这个变化过程叫做step, 一个step取决于message buffer返回消息的情况, 因为receive(p)返回的是M还是null, 而transition function是deterministic的, 所以下一个configuration取决于message buffer的返回值. 这个消息被接受处理的过程叫做event(p, m), 消息被延迟的事件叫做event(p, null). 这些steps叫做一个run, 如果结果的configuration有任何一个进程的yp={0,1}那么着叫做一个deciding run, 这个configuration已经有了表决结果. 因为只要有一个进程能够进入decision state那么整个configuration就算是0-valent或者1-valent了.
+一个configuration(状态)就是指所有进程的内部状态和message buffer状态. 整个系统总是从一个configuration变化为另外一个configuration. 这个变化过程叫做step, 一个step取决于message buffer返回消息的情况, 因为receive(p)返回的是M还是null, 而transition function是deterministic的, 所以下一个configuration取决于message buffer的返回值. 这个消息被接受处理的过程叫做event(p, m), 消息被延迟的事件叫做event(p, null). 这些steps叫做一个run, 如果结果的configuration有任何一个进程的yp={0,1}那么着叫做一个deciding run, 这个configuration已经有了表决结果. 因为只要有一个进程能够进入decision state，那么整个configuration就算是0-valent或者1-valent了.
 
 <img src="/images/2015-10-28/model.png" max-height="500px">
 
 一个configuration的一个schedule(事件序列)记作𝞂, 它包含了从这个configuration起, 一系列的事件. 比如(p1, m1), (p2, m2), (p3, m3)....
 
-一个configuration如果无论后继的事件如何都会进入选择0的状态, 这叫做0-valent. 如果总是会进入选择1的状态, 这叫做1-valent. 如果两种情况都可能发生, 那么叫做bi-valent.
+如果一个configuration不需要依赖之后发生的事件，在当前的时间就能确定自身的状态，则称为n-valent。例如，一个configuration如果无论后继的事件如何都会进入选择0的状态, 这叫做0-valent. 如果总是会进入选择1的状态, 这叫做1-valent. 如果两种情况都可能发生, 那么叫做bi-valent.
 
 
 # Lemma 1
@@ -85,13 +85,13 @@ Let C be a bivalent configuration of P, and let e=(p, m) be an event that is app
 
 如果把e用于Ɛ中某一个configuration, 那么相当于Ɛ中离起始的C越远的configuration收到e越晚, e越被延迟. 由于我们定义了Ɛ不含e, 所以e只会发生在Ɛ的边界上, 实际上就是把e延迟成为离开Ɛ进入Ɗ的最后一个消息. e会把Ɛ内每一个configuration映射到Ɗ 中一个configuration.
 
-我们要证明Ɗ包含bivalent configuration, 我们反证它. 假设D没有bivalent configuration, 那么Ɗ只能包含0-valent和1-valent. 也就是说e回把Ɛ中每一个边界的configuration变为(映射为)Ɗ 中的一个0-valent或者1-valent configuration. 按照这个思路, 因为C是bivalent, 所以一定会同时存在E0和E1分别是0-valent和1-valent. 接下来分两种情况分析:
+我们要证明Ɗ包含bivalent configuration, 我们反证它. 假设D没有bivalent configuration, 那么Ɗ只能包含0-valent和1-valent. 也就是说e会把Ɛ中每一个边界的configuration变为(映射为)Ɗ 中的一个0-valent或者1-valent configuration. 按照这个思路, 因为C是bivalent, 所以一定会同时存在E0和E1分别是0-valent和1-valent，从C可达E0和E1. 接下来分两种情况分析:
 
-如果E0还没有收到e, 那么E0属于Ɛ, 那么E0收到e之后会变成F0. F0明显是0-valent并且属于Ɗ. 同样, 如果E1还没有收到e, 也会有F1属于Ɗ.
+如果E0还没有收到e, 那么E0属于Ɛ, 那么定义E0收到e以后的configuration为F0. F0明显是0-valent（E0是0-valent的，因为参考lemma 2的证明，如果F0变为1-valent的话，则只存在一种可能即事件e的消息是1，假设e事件接受消息的进程p故障，则F0可能变为bivalent。但是Ɗ不包含bivalent configuration，故F0只可能是0-valent。综上所述，我们可以推出若configuration是n-valent的，那么其在接收事件e以后的子configuration也一定是n-valent的，即决策值已经确定。）并且属于Ɗ. 同样, 如果E1还没有收到e, 也会有F1属于Ɗ.
 
 如果E0已经收到过e, 那么E0不属于Ɛ, 由于e是最后一个消息, 所以必然存在于Ɛ边界上一个configuration收到e之后变成F0进入Ɗ, 然后F0可能经过收到其他消息最终变成E0. 根据反证假设, F0必须是0-valent. 类似的, 如果E1还没有收到e, 也会有F1属于Ɗ, 并且F1可以变成E1.
 
-这两种情况下总是有一个E和F可以通过一个消息变成对方. 因为C是bivalent, 所以一定同时存在E0/E1, 那也就同时存在F0/F1. 所以由反证假设可以得出结论: Ɗ总是同时包含0-valent和1-valent.
+这两种情况下总是有一个E和F互相可达. 因为C是bivalent, 所以一定同时存在E0/E1, 那也就同时存在F0/F1. 所以由反证假设可以得出结论: Ɗ总是同时包含0-valent和1-valent.
 
 <img src="/images/2015-10-28/lemma3_sample.png" max-height="500px">
 

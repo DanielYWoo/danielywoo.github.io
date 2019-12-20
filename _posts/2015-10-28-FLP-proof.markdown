@@ -101,11 +101,11 @@ C1=A建议1给B/C. B/C自己都倾向于1.
 Let C be a bivalent configuration of P, and let e=(p, m) be an event that is applicable to C. Let ε be the set of configurations reachable from C without applying e, and let Ɗ = e(ε) = {e(E) when E ∈ ε and e is applicable to E}. Then, Ɗ contains a bivalent configuration.
 
 这是整个证明的核心部分, 这部分比较难理解.
-首先C不是initial configuration了, C可能是某个中间过程的configuration, 然后C是bivalent的. 假设e=(p, m)这个消息是可以应用于C的, 那么不用e所能达到的所有configuration应该是一幅图. 这个图就是ε. ε内任何一个configuration再用e就跳出ε, 并得到了一个集合Ɗ. 每一个'ε边界'上的configuration就是E, 因而有D=e(E).
+首先C不是initial configuration了, C可能是某个中间过程的configuration, 然后C是bivalent的. 假设e=(p, m)这个消息是可以应用于C的, 那么不用e所能达到的所有configuration应该是一幅图. 这个图就是ε. ε内任何一个configuration再用e就跳出ε, 并得到了一个集合Ɗ. 每一个'ε边界'上的configuration就是E, 因而有Ɗ=e(E).
 
 如果把e用于ε中某一个configuration, 那么相当于ε中离起始的C越远的configuration收到e越晚. 由于我们定义了ε不含e, 所以e只会发生在ε的边界上, 实际上就是把e看作离开ε进入Ɗ的最后一个消息. e会把ε内每一个configuration映射到Ɗ 中一个configuration.
 
-我们要证明Ɗ包含bivalent configuration, 我们反证它. 假设D没有bivalent configuration, 那么Ɗ只能包含0-valent和1-valent. 也就是说e会把ε中每一个configuration变为(映射为)Ɗ 中的一个0-valent或者1-valent configuration. 按照这个思路, 因为C是bivalent, 所以C可以到达0-valent和1-valent，假设他们是Ei, i = {0, 1}. 接下来分两种情况分析:
+我们要证明Ɗ包含bivalent configuration, 我们反证它. 假设Ɗ没有bivalent configuration, 那么Ɗ只能包含0-valent和1-valent. 也就是说e会把ε中每一个configuration变为(映射为)Ɗ 中的一个0-valent或者1-valent configuration. 按照这个思路, 因为C是bivalent, 所以C可以到达0-valent和1-valent，假设他们是Ei, i = {0, 1}. 接下来分两种情况分析:(此处不要把Ei和lemma 3中的E混淆，二者含义不同, Ei此处不一定属于ε)
 
 1. 如果Ei属于ε, 说明Ei还没有收到e, 那么Ei收到e之后变为Fi=e(Ei), Fi显然属于刚才我们定义的Ɗ。
 2. 如果Ei不属于ε, 说明Ei已经收到了e，那么必然存在Fi ∈ Ɗ, 使C收到e后到达Fi，然后再到达Ei。

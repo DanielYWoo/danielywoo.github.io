@@ -74,11 +74,13 @@ Consensus定义:
 
 任何一个协议P一定会有bivalent初始configuration. 这是由于异步网络的本质造成的. 因为异步网络的消息顺序不一定, 所以对同一个初始configuration都可能会运行产生不同的结果. 证明如下:
 
-反证法, 假设协议P没有bivalent initial configuration, 那么P的initial configuration不是0-valent就是1-valent. 我们把所有只差一个进程的p上的xp变量不同的两个initial configuration叫做相邻(adjacent). 因为同时存在0-valent和1-valent的initial configurations, 假设是C和C', 那么从C到C'一定有一个路径上, 至少存在一处相邻的C0和C1, 使得C0是0-valent, C1是1-valent. 下图是一个只有三个进程(p0, p1, p2)的所有initial configuration的情况, 线条连接的是相邻的两个initial configuration. (注意，这里的路径不是指变化路径，他只是表示initial configuration的相似性)
+反证法, 假设协议P没有bivalent initial configuration, 那么P的initial configuration不是0-valent就是1-valent. 我们把所有只差一个进程的p上的xp变量不同的两个initial configuration叫做相邻(adjacent). 
+
+由本文开头提到的Consensus的第三点validity要求, 全部xp都是0的configuration结果也应该是0，同样全部xp都是1的configuration结果也应该是1，所以如果P没有bivalent initial configuration那么一定是同时包含了0-valent 和 1-valent的initial configuration。 因为同时存在0-valent和1-valent的initial configurations, 假设他们是C和C', 那么从C到C'一定有一个路径上, 至少存在一处相邻的C0和C1, 使得C0是0-valent, C1是1-valent. 下图是一个只有三个进程(p0, p1, p2)的所有initial configuration的情况, 线条连接的是相邻的两个initial configuration. (注意，这里的路径不是指变化路径，他只是表示initial configuration的相似性)
 
 <img src="/images/2015-10-28/lemma2_adjacent.png" max-height="500px">
 
-为什么说“一定存在相邻的C0和C1“呢？看这个图，明显{0,0,0}肯定是0-valent, {1,1,1}肯定是1-valent，那么我们把他们当作C和C', 那么可能在{0,0,0} - {0,1,0} - {1,1,0} - {1,1,1}这条路径上, {0,1,0}和{1,1,0}就是C0和C1的分界点, 也可能在其他路径上，但是无论如何一定存在这个分隔处。
+为什么说“一定存在相邻的C0和C1“呢？看这个图，明显{0,0,0}肯定是0-valent, {1,1,1}肯定是1-valent，那么我们把他们当作C和C', 显然这是个联通图，所以他们俩是reachable的，那么他们之间的某个路径上一定存在从0-valent变化到1-valent的地方。这个例子中在{0,0,0} - {0,1,0} - {1,1,0} - {1,1,1}这条路径上, {0,1,0}和{1,1,0}很有可能就是C0和C1的分界点(假设{0,1,0}是0-valent，{1,1,0}是1-valent), 也可能在其他路径上，比如如果{0,1,0}是1-valent，那么分界点就在{0,0,0}和{0,1,0}了。无论如何一定存在一对相邻的initial configuration分别是0-valent和1-valent。
 
 假设p是C0和C1这两个initial configuration之间初始状态不同的那个进程, 如果p是faulty的（原文takes no steps）, p不再从buffer里获得任何消息, 那么C0和C1如果排除了p之后其实状态是一样的, 那么排除了p之后C0上的某个事件序列𝞂也可以应用在C1上, 而且结果相同. 因为C0是0-valent的, C1是1-valent的, 他们的结果应该分别是0和1, 这和他们排除p之后结果相同的推论矛盾.
 

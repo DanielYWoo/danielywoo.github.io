@@ -19,7 +19,7 @@ Before we start, let's go through the commonly used cache patterns by how we ref
 
 * Write Through: Synchronously write to database then cache. This is safe because it writes to database first, but it's slower than Write-Behind. It offers better performance for write-then-read scenario than write-invalidate.
 * Write Behind (or write back): write to cache first, then asynchronously write to database. This is fast for writing, and even faster if you combine multiple writes on the same key into a single write to database. But you lose data in case the process crashes before the data is flushed to database. A RAID card is a good example of this pattern, to avoid data loss you often need a battery backup unit on a RAID card to hold the data in cache but not landed to disk yet.
-* Write invalidate: similar to write-through, write to database first, but then invalidate the cache. This simplifies handling consistency between cache and database in case of concurrent updates. You don't need complex synchronization, the trade-off is hit rate is lower because you always invalidate cache and the next read will always be a miss. See https://www.usenix.org/system/files/conference/nsdi13/nsdi13-final170_update.pdf
+* Write invalidate: similar to write-through, write to database first, but then invalidate the cache. This simplifies handling consistency between cache and database in case of concurrent updates. You don't need complex synchronization, the trade-off is hit rate is lower because you always invalidate cache and the next read will always be a miss. See [Scaling Memcache at Facebook](https://www.usenix.org/system/files/conference/nsdi13/nsdi13-final170_update.pdf).
 
 ##### When Read
 
@@ -49,7 +49,7 @@ It is the consistency between cache and database. Because they’re two independ
 
 ##### Client-view Consistency 
 
-It means that each client has a consistent view of the cached data. It is important for correct application behaviors in many cases. If the data is updated from version 1 to 2. It 3, … to 5, any client should see the same total order but none of them sees something like 1-2-5-3-4. This is actually sequential consistency model in a distributed system. (for more details, you can google sequential consistency or read a series of my article (https://danielw.cn/history-of-distributed-systems-1 Chinese only for now).
+It means that each client has a consistent view of the cached data. It is important for correct application behaviors in many cases. If the data is updated from version 1 to 2. It 3, … to 5, any client should see the same total order but none of them sees something like 1-2-5-3-4. This is actually sequential consistency model in a distributed system. (for more details, you can google sequential consistency or read a series of my article [History of consistency models in distributed systems](https://danielw.cn/history-of-distributed-systems-1) (Chiense version only for now, I will write an English version later).
 
 Sometimes you don't care about the full history, only care about the latest update is visible, in that case if a client is able to see 1-2-3-4-5 but decide to drop 2-3 and get a view of 1-4-5, that's fine either.
 

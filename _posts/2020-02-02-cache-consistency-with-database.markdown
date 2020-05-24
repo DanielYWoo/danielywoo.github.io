@@ -84,7 +84,7 @@ WRITE X.VALUE = 1 IF X.VERSION=<the version you want to write> OR X NOT CACHED
 
 With CAS, at step 7 T1 will fail and T1 is be able to query cache again to get the latest X.
 
-A very special case is that if T1 pauses very long, long enough that the value of X written at step 6 expires, in that case T1 is still able to write the stale data to cache, but this is extremely rare to happen, because T1 has to pause very long, maybe 15 minutes which is unlikely to happen. So, this is just a possibility in theory.
+A very special case is that if T1 pauses very long, long enough that the value of X written at step 6 expires, in that case T1 is still able to write the stale data to cache, but this is extremely rare to happen, because T1 has to pause very long, maybe 15 minutes which is unlikely to happen. So, this is just a possibility in theory. If you want to solve this, consider using a timestamp when writing to cache, and the cache system can reject the write if it's too old. e.g. the expiration is set to 5 minutes, if the write with a timestamp older than 5 minutes, reject and report error so the client can be aware of this and retry. However, any timestamp based solution is vulnerable to clock drift and you must have correct NTP setup.
 
 #### Concurrency in Write-through
 

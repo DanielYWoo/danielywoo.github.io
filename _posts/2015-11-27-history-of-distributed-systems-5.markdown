@@ -66,4 +66,6 @@ gossip, SWIM
 2010年的时候是不是你已经大学毕业了? 我们处于一个高速发展必须不断学习的行业是不是很酷?
 
 
+TODO: external consistency
 
+provides externally consistent [16] reads and writes, and globally-consistent reads across the database at a timestamp.

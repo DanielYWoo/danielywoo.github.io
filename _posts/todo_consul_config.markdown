@@ -1,4 +1,9 @@
-
+---
+layout: post
+title:  "Consul Configuraiton for Spring Boot"
+date:   2015-10-28 13:11:45
+published: false
+---
 
 
 # Consul Starter Initialization

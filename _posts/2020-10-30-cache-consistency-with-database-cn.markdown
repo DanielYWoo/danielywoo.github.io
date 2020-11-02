@@ -1,57 +1,60 @@
 ---
 layout: post
-title:  "Cache Consistency with Database"
-date:   2020-02-02 16:00:00
-published: true
+title:  "数据库和缓存的一致性"
+date:   2020-10-30 16:00:00
+published: false
 ---
 
-### Overview
+### 前言
 
-Cache consistency and coherency is one of the most difficult problems in computer science and it's a very big topic. In this article, we only talk about layered cache like Redis on top of a database, which is commonly used nowadays. But the generality exists among all cache applications.
+此文为之前发布的[Cache Consistency with Database](https://danielw.cn/cache-consistency-with-database)的中文版.
 
-### Concepts
+Cache consistency and coherency 是计算机科学中非常困难的两个话题，本文我们只讲述一种情况，就是我们使用数据库和缓存的时候，缓存和数据库内容的一致性。比如Redis+MySQL的模式，这可能是目前最为普遍的一种设计方式。
 
-Before we start, let's go through the commonly used cache patterns by how we refresh the cache.
+### 概念
 
-#### Cache Patterns
+在我们开始之前，我们现需要重温一下各种常用的缓存模式。
+
+#### 缓存模式
 
 ##### When Write
 
-* Write Through: Synchronously write to database then cache. This is safe because it writes to database first, but it's slower than Write-Behind. It offers better performance for write-then-read scenario than write-invalidate.
-* Write Behind (or write back): write to cache first, then asynchronously write to database. This is fast for writing, and even faster if you combine multiple writes on the same key into a single write to database. But you lose data in case the process crashes before the data is flushed to database. A RAID card is a good example of this pattern, to avoid data loss you often need a battery backup unit on a RAID card to hold the data in cache but not landed to disk yet.
-* Write invalidate: similar to write-through, write to database first, but then invalidate the cache. This simplifies handling consistency between cache and database in case of concurrent updates. You don't need complex synchronization, the trade-off is hit rate is lower because you always invalidate cache and the next read will always be a miss. See [Scaling Memcache at Facebook](https://www.usenix.org/system/files/conference/nsdi13/nsdi13-final170_update.pdf).
+* Write Through: 同步写入数据库，然后缓存。这种模式下，数据写入是安全的不会丢失挥发的。但是这种模式比较慢，因为下层的数据库通常比缓存慢很多。
+* Write Behind (or write back): 先写缓存，然后立即返回成功，后台异步写入数据库。这种模式写肯定非常快，对数据库的压力也比较平缓，而且异步写入的时候可以合并多次写入变成一次写入，进一步减少对数据库的压力。但是这种模式下一旦缓存服务器重启，还没来得及flush进入数据库的数据有可能丢失。RAID card 为例，为了避免服务器掉电丢失缓存中的数据，我们通常会使用BBU备用电池来确保没有落盘的数据不会因为掉电而丢失。
+* Write invalidate: 类似于write-through, 先写入数据库，然后清除缓存，而不是更新缓存。这种模式部分解决了了并发写入的时候，数据库和缓存之间的不一致, 并且不需要引入分布式锁，实现比较简单。缺点就是你的hit rate会比较低，因为你总是invalidate缓存, 这经常会导致下一个read读不到缓存。这种模式在Facebook的这边论文有所提及 [Scaling Memcache at Facebook](https://www.usenix.org/system/files/conference/nsdi13/nsdi13-final170_update.pdf).
 
 ##### When Read
 
-* Read Through: When a read misses, load it from database and save it to cache. The major problem of this pattern is that sometimes you need to warm up your cache, if you have a hot product on sale exactly at 9:00 AM on black Friday in your website, a cold cache could cause many requests pending for that product.
+* Read Through: 当读不到缓存，从数据库加载并更新到缓存。这种模式通常和写的三种模式配合使用。这种模式的缺点是你需要预热数据，否则每个key第一次读取的时候都会很慢。在市场活动的峰值流量到来之前，通常你要预热缓存, 防止冷缓存击穿数据库。
 
 ##### When not Read or Write
 
-* Refresh ahead: predict hot data and automatically refresh cache from database, never blocking reads, best for small read-only dataset, For example, zip code list cache, you can periodically refresh the whole cache since it's small and read-only. If your can precisely predict what keys to be read most, you can also warm up those keys in this pattern. Lastly, if the data is updated outside of your system and your system can’t be notified, you probably have to use this pattern. 
+没有读写的时候，也不能闲着，我们需要evict和refresh。
 
-In most cases, we use read-through with write-through/write-behind/write-invalidate. Refresh-ahead can be used standalone, or as an optimization to predict and warm up reads for read-through.
+* Refresh Ahead: 可以预测热数据并自动从数据库刷新高速缓存，从不block read，通常用于小型只读数据集，例如，邮政编码列表缓存，由于它很小且是只读的，因此可以定期刷新整个缓存。对于可写的大数据集合，如果你可以预测最常读取哪些键，那么你也可以使用这个方式来预热缓存。最后一种情况是，如果缓存数据是被外部系统更新的，而且你还得不到通知，你可能只能用这个模式来更新缓存了。
 
-And there are two implementations patterns by who is responsible for cache maintenance, the caller or a dedicated layer.
+在大多数情况下，我们将read-through和write-through/write-behind/write-invalidate一起配合使用。Refresh-ahead可以单独使用，也可以作为read-through的补充优化。
 
-* Cache-facade: The cache layer is a library or service delegates write to database and you only talk to the cache layer. Then database is transparent to your application. The cache layer can handle the consistency and failover. For example, many databases have its own cache, this is a good example of cache-façade. You can also write some in-process DAO layer to read/write entities that has an embedded cache layer, from the callers' perspective this tiny layer is also a cache-facade.
+从缓存的维护职责来看（调用者维护或专用层维护），有两种实现模式。
 
-* Cache-aside: Your application maintains the cache consistency that means your application code is more complicated, but this allows more flexibility. 
-For example, a cache-facade pattern like a database query cache can only cache rows, if you want to cache a Java POJO or Kotlin Data Class with rows, cache aside is much easier. But it is still doable with cache facade, for example, spring cache as a facade library to cache POJOs, and handle POJOs with database under the hood automatically.
+* cache-facade: 缓存层是一个类库或服务委托写到数据库，而您仅与缓存层对话。然后数据库对您的应用程序是透明的。缓存层可以处理一致性和故障转移。例如，许多数据库都有自己的缓存，调用者不必关心缓存的更新和过期，这是Cache Facade的一个很好的例子。这种模式最大的优点是, 如果facade是资源本身提供的，那么他的一致性比较容易控制。您还可以编写一些进程内DAO层来读取/写入具有嵌入式缓存层的实体，从调用者的角度来看，这个很小的层也是一个Cache Facade, 比如Spring的cache实现，但是这时候缓存一致性就无法保证了。
 
-The cache-façade and cache-aside patterns are distinguished from the caller's perspective. No matter which pattern you go, you always have to deal with concurrency and consistency that is difficult and often omitted in a distributed system. Since it has to be solved either in cache-aside or cache-façade pattern, and the implementation is actually the same, so I’ll talk about this topic under cache-aside pattern throughout this article.
+* cache-aside: 您的应用程序需要自己来保持缓存的一致性，这意味着您的应用程序代码更加复杂，但是这提供了更大的灵活性。比如，cache aside更容易实现对象缓存，如果是cache facade模式的数据库缓存，一般来说他只能cahce rows，如果要把数据库记录作为Java POJO或者Kotlin的Data Class来缓存就很困难了。而cache aside可以把缓存和数据库完全独立出来，所以实现起来很容易. 当然，cache facade也可以缓存POJO，比如通过Spring这样的类库把POJO序列化到Redis，但是实现起来没这么简单。但是cache aside模式下通常缓存一致性比较难保持。
 
+无论采用哪种模式，您都必须面对和解决并发一致性，而这在分布式系统中通常很困难，并且常常被遗漏。由于无论是cache facade 还是 cache aside, 我们都需要解决一致性并且实现方式相同，因此在本文中，我将只以 cache aside 模式讨论此主题.
 
 #### Consistency
 
+首先，我们先定义什么是缓存一致性。关于分布式系统一致性问题的基本讨论，请参考[分布式系统一致性的发展历史](https://danielw.cn/history-of-distributed-systems-1).
 
-Now, let's define our consistency problems. (For more details about consistency models, please refer to [分布式系统一致性的发展历史](https://danielw.cn/history-of-distributed-systems-1), sorry it's only available in Chinese). 
+对于缓存一致性 一种是底层资源和缓存之间的一致性，the cache-database consistency, 还有一种是使用缓存的应用节点之间的一致性： client-view consistency.
 
-We have two kinds of consistency problems here, the cache-database consistency client-view consistency.
 
 ##### Cache-database Consistency
 
-It is the consistency between cache and database. Because they’re two independent systems, there are always inconsistency time window when you change any data. If the first operation succeeds and the second one fails, it creates many problems. For Write-through, you change database first, then the cache is inconsistent. For Write-behind, you change the cache first, so the database is inconsistent. The inconsistency matters for write-behind pattern since the inconsistent time window means the probability of data loss if cache system fails. Basically, there is always inconsistency between them, all we can do is to minimize the time window of the inconsistency. 
-In general, a cache-facade pattern in a non distributed system like the query cache in MySQL is easier to implement since both the write to disk and cache is local. But MySQL's query cache is not very performant for two reasons. First, it's difficult to identify affected queries because MySQL supports complex queries (you can join tables or do a lot of complex things with it, for the same reason sub-query is not cached). Suppose you have a table with 100 rows, and you have 100 queries to query each of them. If one row is updated, all other 99 cached queries are evicted and the benefit of cache here is little. Another reason is that MySQL cache needs to provide MVCC and linearizability level consistency which makes cache eviction more frequent. Due to the two reasons, MySQL has to choose a coarse-grained method to expire and evict cache. That's why we often use Redis as cache-aside pattern to trade off consistency for better performance. NoSQL databases like Cassandra does not have such problem because it does not provide such strong consistency guarantee and it supports much simpler and predictable queries. Cassandra has memtable as write-behind cache layer, so writing it extremely fast. To avoid data loss due to write-behind pattern, it has write ahead log and in-memory replica to ensure data safety. So you don't need an extra Redis cache layer to work with Cassandra.
+这是缓存和资源(通常是数据库)之间的一致性。由于它们是两个独立的系统，因此更改任何数据时总会出现不一致的时间窗口。如果第一个操作成功而第二个操作失败，则会产生许多问题。对于write-through，您首先更改数据库，然后缓存和数据库会有个很小的窗口不一致。对于write-behind，您首先要更改缓存，因此数据库会有一个短暂时间和缓存不一致。(不一致的窗口大小对于write-behind模式很重要，因为不一致的时间窗口意味着在高速缓存系统发生故障时数据丢失的可能性, 而过小的窗口又无法体现cache behind的性能优势)。基本上，它们之间总是存在不一致的地方，我们所能做的就是最小化不一致的时间窗口。
+
+通常，在非分布式系统（如MySQL中的查询缓存）中的cache facade模式更易于实现，因为对磁盘的写入和缓存都是本地的。但是MySQL的查询缓存性能不佳，有两个原因。首先，很难识别受影响的查询，因为MySQL支持复杂的查询（您可以join很多表或使用它做很多复杂的事情,比如子查询）。假设您有一个包含100行的表，并且您有100条查询来查询每行。如果更新一行，则将evict所有其他99个缓存查询，此处缓存的好处很小。另一个原因是MySQL缓存需要提供MVCC和linearizability级别的一致性，这会使cache evict更加频繁。由于这两个原因，MySQL必须选择一种粗粒度的方法来到期并evict cache。这就是为什么我们经常使用Redis作为cache aside模式来牺牲一致性以获得更好的性能。像Cassandra这样的NoSQL数据库没有这样的问题，因为它没有提供如此强的一致性保证，并且支持更简单和可预测的查询。 Cassandra具有memtable作为write-behind缓存层，因此写入速度非常快, 这是特别好的一个cache facade模式的实现。同时为了避免由于write-behind造成的数据丢失，它具有WAL和in-memory副本以确保数据安全。因此，您不需要额外的Redis缓存层(cache aside)即可与Cassandra一起使用。
 
 ##### Client-view Consistency 
 

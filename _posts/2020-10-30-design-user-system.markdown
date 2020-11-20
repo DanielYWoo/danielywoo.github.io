@@ -53,10 +53,25 @@ Below is a typical design for enterprise users, actually most IaaS/PaaS provider
 
 <img src="/images/2020-10-30/user-system-etom.png" width="600px">
 
-### Identity Verification Difficulties
+### Implementation Difficulties
+
+
+
+#### Identity Verification Difficulties
 
 If your system requires identity verification of your customers, it's actually often very difficult to implement in many cases. E,g. for personal customer, he/she could sign up several times with different identity informations like SSN, passport, drive license. Unless you have a cross verification mechanism you cannot link them, your system will end up with 3 customers and actually they are from the same person. Most countries or states do not provide such cross check services or APIs. For small business SaaS applications, it's better to keep only one method of verification; for large business entities it's not a big deal, because the ARAP per customer is worthy for you to manually verify them one by one with different identifications.
 
+
+#### User Merge
+
+As I mentioned before in this article, even you have a simple user system, once you have customer identity verification and you may see two users are actually the same customer, then you need to either merge the two users, or migrate the customer data from one to the other one. This is very difficult to make the process smooth, so sometimes we could just allow only one of them verified.
+
+
+#### Authentication Change
+
+If a user signed up with his phone number solely (no twitter or wechat OAuth, no email), later he changes his phone number, then he might not be able to login again because the he will never receive the SMS verification code. So we always need to encourage users to use multiple authentication methods, and combine the user's private identification and historical behavior data to design an easier process to change authentication.
+
+Another case is, if user A has left your application and changed his phone number, two years later the telecom service provider could assign that phone number to another user B. When B tries to sign up he will see "the phone number has already registerd", then when he tries to login, we cannot just simply let the user login with SMS verification code. Because that will have user B login as user A. To avoid this, we need analyze historical user behavior data and detect such cases (e,g. new device id), then prompt user to provide more information to verify customer identity. If it's still user A, let him in. If it's a new user, we need to design a process to remove the phone number from user A and allow user B to use it to sign up.
 
 ### Conclusions
 

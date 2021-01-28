@@ -20,7 +20,14 @@ Obviously, if you mix them up, storing a rocket launch time in a floating date t
 
 There could be conversions between floating time and explicit time. e.g, to send a congrats email on your birthday which is a floating time, your application can detect which time zone the user is in, then calculate the explicit time to send it. Another example is to send a meeting request to people in different time zones, then it must be an explicit time, but you need to convert that into each participants' local time (floating) at the front end. In this article, we mainly focus on how to handle explicit time correctly because this is much more difficult than handling floating time.
 
-Explicit time can be processed and displayed correctly only if 1) you storage it correctly in database or cache, 2) you have correct conversion between the storage and your application, 3) you have correct conversion between your application and clients like a browser or an Android device.
+Explicit time can be processed and displayed correctly only if 
+
+1) you storage it correctly in database or cache, 
+
+2) you have correct conversion between the storage and your application, 
+
+3) you have correct conversion between your application and clients like a browser or an Android device.
+
 In this section, we will discuss the three items you need to pay attention to.
 
 
@@ -214,7 +221,7 @@ Then we calculate the UTC epoch at the application side with a Calendar class in
 
 So this is where things are wrong, when getTimestamp(i) on TIMESTAMP field, and you change your time zone and read it again, the UTC Epoch will be wrong. The root cause is TIMESTAMP should be designed to return a string including time zone information like '2021-01-26T01:00:00+2' or just return a UTC epoch. The current design of TIMESTAMP in MySQL is totally wrong and very confusing.
 
-Since TIMESTAMP is not implemented correctly and it cannot represent time beyond the year 2038 due to its internal 4 bytes storage design (wrong design again). On the other hand, DATETIME is a floating date type, you should NEVER use it for both explicit and floating time.
+Since TIMESTAMP is not implemented correctly and it cannot represent time beyond the year 2038 due to its internal 4 bytes storage design (wrong design again).
 
 Recap, if you want explicit dates in MySQL, you can always convert your local time to UTC and save it to DATETIME field, then you always read the time in UTC, return that information to the frontend application in either UTC epoch, or a string including timezone info. If you want floating time, just use LocalDateTime on DATETIME field.
 

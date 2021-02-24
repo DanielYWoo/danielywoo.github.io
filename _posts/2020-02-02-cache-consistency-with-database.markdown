@@ -76,7 +76,7 @@ Suppose we don't use a distributed lock to coordinate T1 and T2, X does not exis
 
 <img src="/images/2020-02-02/concurrency_in_read_through.png" width="500px">
 
-Using a distributed lock can solve this but it's too expensive. A simple solution is to prevent T1 write stale data at step 7 by CAS. Most modern cache system supports CAS write (e.g. Redis Lua), we can use CAS write over a version column like this:
+Using a distributed lock can solve this but it's too expensive. A simple solution is to prevent T1 write stale data at step 7 by CAS. Most modern cache system supports CAS write (e.g. Redis Lua), we can use CAS write with a version to ensure writing order like this (implemented in Redis with Lua):
 
 ```
 # Arguments

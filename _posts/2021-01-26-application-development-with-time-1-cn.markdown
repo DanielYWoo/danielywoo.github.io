@@ -1,6 +1,7 @@
 ---
 layout: post
-title:  "Develop Applications with Time - Floating and Explicit Time（中文）"
+title:  "国际化应用开发中的时间处理 - Floating and Explicit Time（中文）"
+subtitle: "时区，浮动时间和固定时间"
 date:   2021-01-28 17:20:00
 published: true
 ---

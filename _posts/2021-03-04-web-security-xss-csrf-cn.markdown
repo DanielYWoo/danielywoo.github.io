@@ -13,18 +13,20 @@ published: true
 
 # XSS
 
+## 分类
+
 我们曾经有两种类型的XSS，即类型1和类型2。在2005年，Amit Klein发现了第三种类型的XSS，通常称为类型0。
 
-##类型1：stored XSS
+### 类型1：stored XSS
 存储的XSS意味着可以将恶意脚本注入到服务器存储中，例如后端数据库或[浏览器的Local Storage](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API)，然后脚本可以向服务器发送请求，以窃取用户敏感信息，甚至进行付款。这种攻击通常是永久性的。
 
-##类型2：reflected XSS
+### 类型2：reflected XSS
 Reflected XSS是指应用的错误消息或搜索结果包含来自用户输入的恶意脚本。该脚本未存储在任何地方。与类型1不同，这种攻击不是永久性的，需要用户提交触发。
 
-##类型0：基于DOM的XSS
+### 类型0：基于DOM的XSS
 类型1和类型2中的恶意输入提交给服务器处理后，攻击最有可能发生在服务器渲染的页面和表单中。但是在类型0中，恶意的用户输入被直接注入DOM（例如document.write），而没有任何服务器交互。这种类型在现代HTML5单页应用程序中更频繁地发生。
 
-## 如何阻止攻击
+## 防止XSS攻击
 
 ### 客户端渲染 (Client Side Rendering)
 
@@ -127,7 +129,7 @@ GET https://honest-website.com/pay?toAccount=<account>
 ```
 如果黑客可以让用户在被攻击网站上登录，然后再去恶意网站，则付款请求将从受害者的浏览器上，从恶意网站的页面发送到被攻击网站。 并且在大多数情况下，诚实的网站无法区别这是否是用户的意图，并将对其进行正常处理。 尽管同源策略可以保护用户免受javascript脚本发起的ajax请求的攻击，但是这4个tag发起的GET请求不受保护。
 
-## Problem 2: 表单提交允许cross-origin
+## 问题2: 表单提交允许cross-origin
 
 在web发展的早期，开发人员认为世界是美好的，没有黑客，因此cross-origin POST默认被允许，并且许多系统都基于此功能构建。 如果我们有机会回到过去并禁用cross-origin POST并定义CORS标准来指定允许的cross-origin请求，那么许多CSRF漏洞将神奇地消失。 不幸的是，我们不能更改它来打破兼容性，否则互联网上大量的web应用将无法正常工作。
 
@@ -144,7 +146,7 @@ GET https://honest-website.com/pay?toAccount=<account>
   $.ajax({type: "POST", url: url,  data: form.serialize() });
 ```
 
-## Prevention
+## 防止CSRF攻击
 
 ### Correct HTTP Verb
 在问题1的示例中，如果我们将HTTP动词更改为POST，则黑客将无法发起攻击，因为img标签无法发送POST请求。对于修改数据的接口使用POST/PUT/DELETE/PATCH而非GET 这是解决这个问题的最简单的办法。
@@ -209,8 +211,8 @@ Access-Control-Allow-Credentials: true
 
 # 结论
 
-### XSS Recommendation
+## XSS Recommendation
 使用现代Web框架，请避免使用诸如“ dangerouslySetInnerHTML”之类的特殊功能，不要转义用户输入，仅在呈现时转义它。
 
-### CSRF Recommendation
+## CSRF Recommendation
 <b>将正确的HTTP Verb和自定义Header与现代Web框架配合使用在大多数情况下就足够了</b>。 CSRF令牌是使用最广泛的解决方案，但我不建议您这样做，因为它比其他解决方案复杂得多，只有在您的遗留应用程序具有表单提交功能时才使用它。 启用CORS时，您可能会受到信任的网站的攻击。

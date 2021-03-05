@@ -14,16 +14,18 @@ Many people do not have a clear understanding of the differences between XSS and
 
 We used to have two types of XSS, type 1 and type 2. In 2005, Amit Klein defined a third type of XSS, and often referred to as type 0.
 
-## Type 1: stored XSS
+## XSS Types
+
+### Type 1: stored XSS
 Stored XSS means a malicious script can be injected into the server storage such as the backend database or the [browser storage](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API), then the script can send requests to the server to steal user sensitive information or even make payment. This kind of attack is often permanent.
 
-## Type 2: reflected XSS
+### Type 2: reflected XSS
 Reflected XSS means the error message or search result contains malicious script from user input. The script is not stored anywhere. Unlike type 1, this kind of attack is not permanent.
 
-## Type 0: DOM based XSS
+### Type 0: DOM based XSS
 The malicious input in Type 1 and 2 are submitted to the server, and the vulnerability most likely happens with server-rendered pages and forms. But in type 0, the malicious user input is directly injected into the DOM (e.g, document.write) without any server interactions. This type happens more frequently in modern HTML5 single-page applications.
 
-## Prevention
+## XSS Prevention
 
 ### Client Side Rendering
 
@@ -203,8 +205,8 @@ Another problem is that if you trust and allow a website to access your website 
 
 # Conclusion
 
-### XSS Recommendation
+## XSS Recommendation
 Using modern frameworks, avoid using special features like "dangerouslySetInnerHTML", don't escape user input, only escape it when rendering.
 
-### CSRF Recommendation
+## CSRF Recommendation
 <b>In most cases, using correct HTTP verbs and custom headers with a modern web framework should be good enough</b>. CSRF token is the most widely used solution but I do not recommend it, because it's much more complicated than other solutions, only use it if you have a legacy application that has form submissions. When enabling CORS, you could be attacked by the websites you trust.

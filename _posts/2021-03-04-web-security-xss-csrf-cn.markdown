@@ -1,6 +1,7 @@
 ---
 layout: post
-title:  "Web Security General Guidance - XSS and CSRF"
+title:  "Web 安全指导 - XSS and CSRF"
+subtitle:  "脚本注入和跨站伪造请求"
 date:   2021-03-04 18:00:00
 published: true
 ---

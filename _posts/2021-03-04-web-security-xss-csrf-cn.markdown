@@ -28,6 +28,8 @@ Reflected XSS是指应用的错误消息或搜索结果包含来自用户输入�
 
 ### 防止XSS攻击
 
+接下来我们从客户端渲染，服务器端渲染，API设计等多个方面来看如何防范XSS攻击。
+
 #### 客户端渲染 (Client Side Rendering)
 
 大多数客户端框架具有内置的XSS预防功能。例如，React自动转义变量。例如
@@ -61,7 +63,7 @@ return (<a href={val}>mylink</a>)
 #### 服务端渲染 (Server Side Rendering)
 我不想过多地谈论SSR（服务器端渲染），因为无论JSP，PHP，FreeMarker还是Thymeleaf，这种模式都将消失。我们仍然使用SSR的唯一场景是SEO。
 
->尽管Google搜寻器可以模拟无头浏览器并搜寻javascript加载的内容，但由于它相对较慢，因此可能会超出crawler budget，因此SEO场景下建议您预先渲染静态内容或使用SSR。
+>尽管Google爬虫可以模拟无头浏览器并搜寻javascript加载的内容，但由于它相对较慢，因此可能会超出crawler budget，因此SEO场景下建议您预先渲染静态内容或使用SSR。
 
 最受欢迎的渲染解决方案都是基于nodejs的，大多数受欢迎的框架（如React）都可以在服务器端进行渲染，因为React已经有一些机制（在上一节中提到过）可以防止XSS，因此无需担心额外的安全问题，并且SSR或客户端浏览器生成的页面是相同的。
 
@@ -89,7 +91,7 @@ return (<a href={val}>mylink</a>)
 
 原则：输入清理不是用来防止XSS（或SQL注入）的，保持用户输入原样，仅在使用和渲染时决定如何对其进行转义。
 
-#### CSP and other headers
+#### CSP 和其它 headers
 
 ##### Content Security Policy (CSP)
 CSP是一个非常强大的工具，它可以防止浏览器加载不受信任的脚本和样式表以避免XSS，并且可以指定非常复杂的策略。 例如，您可以禁止任何cross-origin资源通过以下方式加载
@@ -190,7 +192,7 @@ axios.defaults.headers.common['X-Requested-By'] = 'desktop-react-app';
 
 实际上，更进一步，您可以停止使用Cookie来保存会话ID，您可以仅将会话ID保留在浏览器本地存储中，然后通过XMLHTTPRequest使用特殊标头将其发送：
 ```
-X-Auth: <your token here>
+X-My-Auth: <your token here>
 ```
 那么无论如何，您的会话ID将不受CSRF的影响，因为CSRF依赖于cookie。 如果您不使用Cookie，则无法利用CSRF相关的攻击向量。
 

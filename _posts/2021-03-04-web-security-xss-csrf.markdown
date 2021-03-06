@@ -1,6 +1,7 @@
 ---
 layout: post
 title:  "Web Security General Guidance - XSS and CSRF"
+subtitle:  "No more need for CSRF Token"
 date:   2021-03-04 18:00:00
 published: true
 ---

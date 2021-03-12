@@ -44,20 +44,22 @@ return (<div>test</div>)
 
 在大多数情况下React不受XSS的影响，除非您使用某些特殊的高风险功能，比如以下三种：
 
-##### Exception 1 - inline javascript:code
+##### 第一种 - inline javascript:code
 ```
 const val = "javascript:alert(0)"
 return (<a href={val}>mylink</a>)
 ```
 
-##### Exception 2 - base64 encoded script
+##### 第二种 - base64 encoded script
 ```
 const val = "data:text/html;base64," + base64encode("<script>alert(0)</script>")
 return (<a href={val}>mylink</a>)
 ```
-##### Exception 3 - dangerouslySetInnerHTML
+##### 第三种 - dangerouslySetInnerHTML
 ```
+{% raw %}
 <div dangerouslySetInnerHTML={{__html:test}} />
+{% endraw %}
 ```
 
 #### 服务端渲染 (Server Side Rendering)

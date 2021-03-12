@@ -43,19 +43,25 @@ The output would be
 ```
 In most cases React is immune to XSS unless you use some special risky features as below:
 ##### Exception 1 - inline javascript:code
+
 ```
 const val = "javascript:alert(0)"
 return (<a href={val}>mylink</a>)
 ```
 
 ##### Exception 2 - base64 encoded script
+
 ```
 const val = "data:text/html;base64," + base64encode("<script>alert(0)</script>")
 return (<a href={val}>mylink</a>)
 ```
+
 ##### Exception 3 - dangerouslySetInnerHTML
+
 ```
+{% raw %}
 <div dangerouslySetInnerHTML={{__html:test}} />
+{% endraw %}
 ```
 
 #### Server Side Rendering

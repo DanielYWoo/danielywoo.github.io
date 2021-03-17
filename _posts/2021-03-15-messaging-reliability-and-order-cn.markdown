@@ -92,7 +92,7 @@ Future<RecordMetadata> send(ProducerRecord<K, V> record, Callback callback);
 
 另一个问题是，当您在上图中的第3步进行了低延迟优化时，您需要避免对同一条消息同时发生第3步和第4步。 为避免这种情况，使用某种外部锁定过于昂贵，我们可以使job仅扫描较旧的待处理消息，以避免发送重复的消息。
 
-### Broker可靠性
+### Broker 可靠性
 
 #### Broker Buffer
 

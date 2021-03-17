@@ -16,7 +16,7 @@ published: true
 
 ### Producer 可靠性
 
-#### 生产者缓冲区
+#### Producer Buffer
 
 大多数MQ框架在生产者端都具有in-memory buffer或TCP Socket buffer，以提高批处理或管道性能。但是缓冲区是易失的，如果连接断开或进程崩溃，缓冲区中的消息可能会丢失。 
 

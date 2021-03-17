@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Messaging Reliability and Ordering"
-date:   2021-03-24 18:00:00
+date:   2021-03-15 18:00:00
 published: true
 ---
 

@@ -1,7 +1,8 @@
 ---
 layout: post
-title:  "Messaging Reliability and Ordering"
-date:   2021-03-24 18:00:00
+title:  "消息可靠性和顺序(中文)"
+subtitle:  "Messaging Reliability and Ordering"
+date:   2021-03-15 18:00:00
 published: true
 ---
 

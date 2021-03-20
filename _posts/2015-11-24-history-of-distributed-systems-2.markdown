@@ -23,7 +23,7 @@ Consensus问题的定义包含了三个方面, 一般的Consensus问题定义为
 
 Consensus要满足以下三个方面: termination, agreement 和 validity. 这三个要素定义了所有Consensus问题的本质. 其中termination是liveness的保证, agreement和validity是safety的保证, 分布式系统的算法中liveness和safety就像一对死对头, 关于liveness和safety的关系, 我们将会在本系列后面的文章中介绍. 所有需要满足这三要素的问题都可以看做是Consensus问题的变体.
 
-在异步网络中, 如果是拜占庭式故障, 那么在异步网络下Paxos和Raft是没有办法解决的, (直到Babara Liskov在2002年提出PBFT[[1]](#参考)我们才可以在放松liveness的情况下解决此类问题, 为此Barbara Liskov获得了图灵奖. 我可能会在将来的文章中介绍PBFT). 对于一般的应用来说拜占庭故障出现的概率太低而解决的成本实在是太高, 所以我们一般不考虑拜占庭式故障. 我们主要是关注crash-recovery failure的模型下的异步网络. 这种情况下根据FLP理论, 只要有一个故障节点, Paxos/Raft都是有可能进入无限循环而无法结束的, 但是实际上这个概率非常低, 如果放松liveness的要求, 我们认为这种情况下Paxos/Raft是可以解决的. 以下介绍Consensus问题的时候我们都不考虑拜占庭式故障, 我们的故障模型是crash-recovery failures, 网络模型是异步网络.
+在异步网络中, 如果是拜占庭式故障, Paxos和Raft是没有办法解决的, (直到Babara Liskov在2002年提出PBFT[[1]](#参考)我们才可以在放松liveness的情况下解决此类问题, 为此Barbara Liskov获得了图灵奖. 我可能会在将来的文章中介绍PBFT). 对于一般的应用来说拜占庭故障出现的概率太低而解决的成本实在是太高, 所以我们一般不考虑拜占庭式故障. 我们主要是关注crash-recovery failure的模型下的异步网络. 这种情况下根据FLP理论, 只要有一个故障节点, Paxos/Raft都是有可能进入无限循环而无法结束的, 但是实际上这个概率非常低, 如果放松liveness的要求, 我们认为这种情况下Paxos/Raft是可以解决的. 以下介绍Consensus问题的时候我们都不考虑拜占庭式故障, 我们的故障模型是crash-recovery failures, 网络模型是异步网络.
 
 在同步网络中因为所有节点时间偏移有上限, 所有包的传输延迟也有上限, 节点会在一个round内完成计算并且传输完成, 所以一旦超过一定时间还没有收到返回的消息, 我们就可以确定要么网络中断要么节点已经crash. 但是我们现实当中都是异步网络, 传输延迟是没有固定上限的, 当很长时间一个节点都没有返回消息的时候, 我们不知道是这个节点计算速度太慢, 还是已经crash了. 如果是这个节点计算太慢, 超时之后, 过了一会这个节点又把结果再发回来了, 这就超出crash-stop故障模型的范围了, 这种情况需要用crash recovery的模型来解决. 在异步网络中无法区分crash和包延迟会导致consensus问题非常难解决.
 
@@ -194,3 +194,9 @@ Paxos设计的时候把异步网络的不确定性考虑在内, 放松了livenes
 6. Michael J. Fischer,	Nancy A. Lynch, Michael S. Paterson. "Impossibility of Distributed Consensus with One Faulty Process" *Journal of the Association for Computing Machinery, Vol. 32, No. 2, April 1985*
 7. Leslie Lamport. "The Part-Time Parliament" *ACM Transactions on Computer Systems 16, 2 (May 1998), 133-169*
 8. Bernadette Charron-Bost, André Schipe. "Uniform Consensus is Harder Than Consensus" *Journal of Algorithms Volume 51 Issue 1, April 2004*
+
+# 系列文章目录
+
+1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
+2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)
+3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)

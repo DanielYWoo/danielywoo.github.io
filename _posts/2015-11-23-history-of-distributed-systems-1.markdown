@@ -180,7 +180,7 @@ Linearizability模型的一致性高于 sequential consistency, 有时候也叫�
 因为OK A早于Enq y B, 那么接下来的事件历史中x就应该比y早出来, 而这个例子中y先出来了, 这违背了队列这种数据结构的定义, 除非程序写错了否则不应该有这样的历史. 如果我们尝试满足那两个条件, 那么这个历史有两种排法:
 
     Enq x A -> OK A -> Deq A -> OK y A -> Enq y B -> OK B
-
+    
     Enq x A -> OK A -> Enq y B -> OK B -> Deq A -> OK y A
 
 但是这两个排法都违背了队列的FIFO行为, 这样的事件顺序不符合Linearizable.
@@ -237,3 +237,8 @@ Linearizability和Sequential Consistency你可以把它们想象成一个烧烤�
 2. <a href="https://queue.acm.org/detail.cfm?id=2917756">Why Vector Clocks are Easy</a>
 3. <a href="https://www.datastax.com/blog/2013/09/why-cassandra-doesnt-need-vector-clocks">Why Cassandra Does not Need Vector Clocks</a>
 
+# 系列文章目录
+
+1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
+2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)
+3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)

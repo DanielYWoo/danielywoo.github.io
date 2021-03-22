@@ -242,3 +242,5 @@ Linearizability和Sequential Consistency你可以把它们想象成一个烧烤�
 1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
 2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)
 3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)
+4. [Eventual Consistency](/history-of-distributed-systems-4)
+

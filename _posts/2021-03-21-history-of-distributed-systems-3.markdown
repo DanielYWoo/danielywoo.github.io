@@ -24,7 +24,7 @@ PRAM的模型只能用于一致性要求比较弱, 没有进程间因果关系�
 
 那么对于Linearizability Consistency和Sequential Consistency来说，所有的Pi都应该可以看到一个一样的序列化S, 是H中所有操作的total order，并且满足所有的L<sub>i</sub>中的program order。
 
-而对于前面介绍的PRAM来讲，每个Pi都会有自己的S<sub>i</sub>, 并不会有一个全局的唯一的S, 并且所有的S<sub>i</sub>中的写操作之间也不是全序关系,只是在同一个进程Pi中的写之间有total ordering的关系.
+而对于前面介绍的PRAM来讲，每个Pi都会有自己的S<sub>i</sub>, 并不会有一个全局的唯一的S, 并且所有的S<sub>i</sub>中的写操作之间也不是全序关系,只是在“同一个进程Pi中的写”这个子集内之间有total ordering的关系.
 
 对于Causal Consistency来说, 每个Pi都有自己的S<sub>i</sub>, 但是所有的causally related的写操作作为一个子集，是有全序关系的， 并且这些操作在所有进程上观察到的顺序都一样. 这就是Causal Consistency和PRAM的区别.
 
@@ -88,7 +88,7 @@ PRAM是Pipelined RAM的缩写. Princeton大学的Richard Lipton和Jonathan Sandb
 # Weak Consistency, 1986 – 1989
 目前包括PRAM在内我们所有介绍过的一致性模型都是系统<b>自动同步</b>的, 这意味着硬件实现上要有很多复杂的设计，而效率一定会收到影响。还记得我们之前介绍Sequential Consistency的时候提到的reordering和memory fence的介绍么? 在Sequential Consistency被定义的时候, 科学家们设计的模型是每个指令都要由硬件去保证顺序和同步, 但是性能会很糟糕, 所以我们今天几乎没有任何一款处理器会在硬件自动提供这样的一致性. Weak Consistency说白了就是硬件提供Memory Fence这样的指令, 让开发人员自己在软件中去发送指令, 然后硬件可以理解这样的指令并同步内存. 
 
-1986年Dubois, Scheurich和Briggs发表了论文[Memory Access Buffering in Multi-processors]提及到了在多路处理器中weak ordering的概念. 1989年Adve和Hill的论文中再次定义了Weak Consistency[Weak Ordering – A New Definition].
+1986年Dubois, Scheurich和Briggs发表了论文[Memory Access Buffering in Multi-processors](#参考)提及到了在多路处理器中weak ordering的概念. 1989年Adve和Hill的论文 [Weak Ordering – A New Definition](#参考)中再次定义了Weak Consistency.
 
 1986年的论文中的定义为：
 
@@ -111,11 +111,13 @@ Let a synchronization model be a set of constraints on memory accesses that spec
 3. Herlihy, Maurice P.; Wing, Jeannette M. (1987). "Axioms for Concurrent Objects". *Proceedings of the 14th ACM SIGACT-SIGPLAN Symposium on Principles of Programming Languages, POPL '87. p. 13*
 4. Kenneth Birman, Andre Schiper, Pat Stephenson. "Lightweight Causal and Atomic Group Multicast" *ACM Transactions on Computer Systems, Vol. 9, No. 3, August 1991*
 5. Colin J. Fidge. "Timestamps in Message-Passing Systems That Preserve the Partial Ordering" *In K. Raymond (ed.). Proc. of the 11th Australian Computer Science Conference (ACSC'88). pp. 56–66.*
-6. S. V. Adve and M. D. Hill, "Weak ordering-a new definition," *[1990] Proceedings. The 17th Annual International Symposium on Computer Architecture*, Seattle, WA, USA, 1990, pp. 2-14, doi: 10.1109/ISCA.1990.134502.
+6. Michel Dubois, Christoph Ernst Scheurich, Fayé Alaye Briggs. "Memory access buffering in multiprocessors" *0884-7495/86/0000/0434S01.00 © 1986 IEEE*
+7. S. V. Adve and M. D. Hill, "Weak ordering-a new definition," *[1990] Proceedings. The 17th Annual International Symposium on Computer Architecture*, Seattle, WA, USA, 1990, pp. 2-14, doi: 10.1109/ISCA.1990.134502.
 
 # 系列文章目录
 
 1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
 2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)
 3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)
+4. [Eventual Consistency](/history-of-distributed-systems-4)
 

@@ -1,6 +1,7 @@
 ---
 layout: post
 title:  "分布式系统一致性的发展历史 (四)"
+Subtitle: "Eventual Consistency"
 date:   2021-03-22 18:00:00
 published: true
 ---
@@ -39,7 +40,7 @@ Eventual Consistency不要求其他进程看到一样的历史，因此对于上
 
 第二个变体是Session Consistency。对于某些应用会有session的概念，比如某个客户端建立的数据库连接就是一个session。这是一个客户端视角的变体，假设客户端是P1，数据库是P2和P3两个节点，x初始值为1，那么P1的W(x) 2会发给P2和P3，不管P2和P3之间如何复制同步x，P1下次对x的读取应该会得到2.
 
-### Dynamo
+### Dynamo和Cassandra
 
 作者最后在论文中拿Dynamo举了个例子，其实Cassandra也是一样的模型。我们引入三个变量
 * N 一个数据要复制多少份

@@ -1,6 +1,7 @@
 ---
 layout: post
 title:  "分布式系统一致性的发展历史 (三)"
+Subtitle: "Causal Consistency, PRAM Consistency, Weak Consistency"
 date:   2021-03-21 10:00:00
 published: true
 ---

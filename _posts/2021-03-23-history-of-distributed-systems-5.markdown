@@ -109,86 +109,40 @@ Sb: {a2l, a22, a23, all, a12, a13}.
 
 # External Consistency
 
-In 1981, David Gifford第一次定义了External Consistency.
+In 1981, David Gifford第一次定义了External Consistency. 他先定义了一个Causal依赖模型（为了更容易理解，我对原文稍微做了一点点调整）
+
+> A schedule generates a dependency relation. A dependency relation describes transactions that depend on one another. 
+>
+> If S is a schedule, then <T<sub>a</sub>, e, T<sub>b</sub>  is a member of DEP(S) if: 
+>
+> * T<sub>a</sub> and T<sub>b</sub> are distinct transactions 
+> * a<sub>i</sub>∈T<sub>a</sub> and a<sub>j</sub>∈T<sub>j</sub>
+> * a<sub>i</sub> and a<sub>j</sub> are actions from S and a<sub>i</sub> occurs before a<sub>j</sub>
+> * a<sub>i</sub> is a write action to an element e
+> * a<sub>j</sub> is a write or read action to e
+> * there are no other write actions to e between a<sub>i</sub> and a<sub>j</sub>
+>
+>In other words, <T<sub>a</sub>, e, T<sub>b</sub>> is in DEP(S) if T a updates data element e that T buses.  (这里蕴含了causal关系)
+>
+>If two schedules S and S* have identical dependency relations, DEP(S) = DEP(S*), then they provide each transaction with the same inputs and outputs. Thus, two distinct schedules that have identical dependency relations are said to be equivalent. 
+
+这就是说，<T<sub>a</sub>, e, T<sub>b</sub>>表示T<sub>b</sub>使用了T<sub>a</sub>写入的数据，和前面说的Conflict Equivalent里讲的Conflict的定义非常接近。如果所有这样的Conflict关系都一样，那么两个schedule就是等价的(Conflict Equivalent)。
+
+然后作者给出了External Consistency的定义：
 
 > The actual time order in which transactions complete defines a unique serial schedule. This serial schedule is called the external schedule. A system is said to provide external consistency if it guarantees that the schedule it will use to process a set of transactions is equivalent to its external schedule.
 
-之前我们已经解释了什么是Serial Schedule，这个定义看起来怎么感觉和Strict Serializability一样呢？又要实时性，又要多对象操作的串行化。
+这个定义看起来怎么感觉和Strict Serializability一样呢？又要实时性，又要多对象操作的串行化。这个equivalent其实就是前面介绍的两种情况：Conflict Equivalent and View Equivalent。
 
-External Consistency在单节点系统上实现并不难，但是在高并发的分布式系统中实现则非常困难。Google的Spanner是最具代表性的实现了External Consistency的超大规模分布式系统。在James Corbett 和大神 Jeff Dean的论文[[4]](#参考)中描述了Spanner是如何通过TrueTime来实现的。
+假设一个人有个账户，有Serial consistency就可以保证两个事务并发时，通过排除了并发行保证数据的一致性。比如一个账户的期初余额200元，然后一个事务T1转入100元，一个事务T2转出100元，我们不会发生一个写入300(200+100)， 一个写入100(200-100)的情况，一定是要么先写入300再写入200，或者先写入100再写入200。而更严格的external consistency(serializability consistency)增加了实时性要求，这样子客户总是可以看到最新的结果。也就是说如果这两个事务有先后关系(T1 finishes commit before T2 starts)， 那么客户看到账户变化历史一定是200 -> 300 -> 200的顺序。如果两个事务是并行的，可以通过Conflict/View做等价串行化变换，那么两个事务不管结果是什么顺序，所有进程都要看到同样的历史。
 
-Spanner的设计目标是实现支持全球跨地区超过百万节点的规模的高可用数据库。通常一份数据会被复制到3到5个数据中心，每个数据分片都会被多个Paxos状态机维持。在这套强悍的基础设施之上他还实现了两个在分布式系统中非常难的特性，其实都是和一致性相关的：
-
-特性1: External Consistency级别的一致性。
-
-特性2: 按照时间戳的全局一致快照读。 
-
-他的这个能力来自于TrueTime系统。这个系统通过GPS和原子钟提供了一套非常简单的API，保证节点之间的时间误差非常小。它主要是三个接口：
-
-| Method | Returns |
-| ------ | ------- |
-| TT.now() | TTinterval: [earliest, latest] |
-| TT.after(t) | true if t has definitely passed, TT.now().earlest > t |
-|TT.before(t)| true if t has definitely not arrived, TT.now().latest < t |
-
-TT.now()返回的是一个时间范围，因为这个API本身需要时间计算，客户端发起和接收结果也有传输延迟，因此TT.now()的返回的是当前时间的可能范围。这个范围的一半叫做ϵ，通常ϵ不超过7ms。
-
-这是因为我们可以根据TrueTime的时间戳确定事务的顺序所以可以实现特性1。一旦所有数据都有历史和时间戳，那么即便是数据在快速变化，我们仍然可以按照时间戳来查询到一组数据某个历史的快照实现特性2。
-
-Spanner有四种事务类型，有三种都是lock-free的，这三种其实底层实现都是一样的，都是利用了“特性2”，只是Read-Only Transaction是Spanner自己决定当前时间戳，后面两个是调用方指定时间戳。
-
-| Operation              | Concurrency Control |
-| ---------------------- | ------------------- |
-| Read-Write Transaction | pessimistic         |
-| Read-Only Transaction|lock-free |
-|Snapshot Read, client-provided timestamp |lock-free|
-|Snapshot Read, client-provided bound |lock-free|
-
-第一种Read-Write是指包含至少一个写操作的事务。它的实现包含了 2-phase locking 和 2-phase commit. 这个过程比较复杂，我们只需要关注两个操作。
-
-Commit Start阶段：当coordinator leader收到对事务T<sub>i</sub>提交的事件e<sub>i</sub>的时候，它会为这个事务分配一个时间戳s<sub>i</sub> = TT.now().latest
-
-Commit Wait阶段：coordinator leader会阻止任何客户端看到刚才写入的数据一会，因为Coordinator和Client的时间存在误差，要等到 TT.now().earlest > s<sub>i</sub>之后才能对外暴露（）.
-
- for a write Ti assigns a commit timestamp si no less than the value of TT.now().latest, computed after e server i . Note that the participant leaders do not matter here; Section 4.2.1 describes how they are involved in the implementation of the next rule.
-
-: The coordinator leader ensures that clients cannot see any data committed by Ti until si < TT.now().earliest.
-
-<img src="../images/2021-03-23/spanner-read-write-tx.png" max-height="500px">
+总之，在我看来Strict Serializable和External Consistency基本是一个概念[待验证，如有错误欢迎指正]。
 
 
 
-后三种read-only情况的实现，这个比较简单, 分两个阶段
-
-1) 分配或者接受客户端指定的一个时间戳 s<sub>read</sub> 。
-
-2) 按照 s<sub>read</sub> 读取数据，这个过程无锁，写入可以继续。
-
-Snapshot reads can execute at any replica that is sufficiently up to date (i.e. sread is less than or equal to a tsafe).
-
-if a transaction *T1* commits before another transaction *T2* starts, then *T1*’s commit timestamp is smaller than *T2*’s.
-
-Denote the absolute time of an event e by the function t<sub>abs</sub>(e). In more formal terms, TrueTime guarantees that for an invocation tt = TT.now(), tt.earliest ≤ t<sub>abs</sub>(e<sub>now</sub>) ≤ tt.latest, where e<sub>now</sub> is the invocation event.
+External Consistency在单节点系统上实现并不难，但是在高并发的分布式系统中实现则非常困难。Google的Spanner是最具代表性的实现了External Consistency的超大规模分布式系统。在James Corbett 和大神 Jeff Dean的论文[[4]](#参考)中描述了Spanner是如何通过TrueTime来实现的External Consistency级别的snapshot read，有兴趣的同学可以自己看一下。
 
 
-
-
-
-
-
-
-
-
-
-## TrueTime's benefits for Cloud Spanner
-
-TrueTime is a highly available, distributed clock that is provided to applications on all Google servers[1](https://cloud.google.com/spanner/docs/true-time-external-consistency#1). TrueTime enables applications to generate monotonically increasing timestamps: an application can compute a timestamp T that is guaranteed to be greater than any timestamp T' if T' finished being generated before T started being generated. This guarantee holds across all servers and all timestamps.
-
-
-
-在2 How TrueTime translates to distributed systems concepts 
-
-> Spanner’s TT-based approach and the causality tracking approach of asynchronous distributed systems sit in two extreme opposite ends of the spectrum. The literature on asynchronous distributed systems ignores wallclock information completely (i.e., it assumes an infinite uncertainty interval), and orders events by just tracking logical causality relations between them based on applying these two rules transitively: 1) if events e and f are in the same site and e occurred before f, then e happened-before f, and 2) if e is a sending of a message m and f is the receipt of m, then e happened-before f. Events e and f are concurrent, if both e happened-before f and f happenedbefore e are false. This causality information is maintained, typically using vector clocks (VCs), at each site with respect to all the other sites. As the number of sites (spanservers) in Spanner can be on the order of tens of thousands, the causality information maintained as such is highly prohibitive to store in the multiversion database, and very hard to query as well. In the other end of the spectrum, Spanner’s TT-based approach discards the tracking of causality information completely. Instead it goes for an engineering solution of using highly-precise dedicated clock sources to reduce the size of the uncertainty intervals to be negligible and order events using wallclock time—provided that the uncertainty intervals of the events are non-overlapping. This wallclock ordering in TT is in one sense stronger than the causal happened-before relation in traditional distributed systems since it does not require any communication to take place between the two events to be ordered; sufficient progression of the wallclock between the two events is enough for ordering them. However, when the uncertainty intervals are overlapping TT cannot order events, and that is why in order to ensure external consistency it has to explicitly wait-out these uncertainty intervals.
 
 # 参考
 
@@ -196,6 +150,6 @@ TrueTime is a highly available, distributed clock that is provided to applicatio
 2. MAURICE P. HERLIHY and JEANNETTE M. WING "Linearizability: A Correctness Condition for Concurrent Objects" *ACM Transactions on Programming Languages and Systems, Vol. 12, No. 3, July 1990, Pages 463-492.*
 3. David K. Gifford. "Information Storage in a Decentralized Computer System". *CSL-81-8 June 1981; Revised March 1982*
 4. James C. Corbett, Jeffrey Dean "Spanner: Google’s Globally-Distributed Database" *Proceedings of OSDI 2012*
-5. Murat Demirbas,  Sandeep Kulkarni. "Beyond TrueTime: Using AugmentedTime for Improving Spanner" *
+5. Murat Demirbas,  Sandeep Kulkarni. *"Beyond TrueTime: Using AugmentedTime for Improving Spanner"*
 
 

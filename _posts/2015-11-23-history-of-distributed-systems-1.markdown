@@ -34,17 +34,17 @@ date:   2015-11-23 19:18:45
 
 事件不是一个瞬间的事情, 它有一个起始和结束的时刻, 由于这个特性, 事件之间会有部分重叠. 比如下图中, A和B两个进程或者节点分别对一个队列enqueue了x和y, 然后再分别dequeue. 你可以看到enqueue操作虽然是A先开始, B后发生, 但是在时间上他们有重叠, 这就是并行, 二者之间的物理时间上顺序可以说是不分先后的, 但是两个dequeue的物理时间上一定是发生在两个enqueue之前的.
 
-<img src="/images/2015-11-23/events_and_time.png" max-height="500px">
+<img src="../images/2015-11-23/events_and_time.png" max-height="500px">
 
 物理时间虽然很重要, 但是在分布式系统中物理时间很难同步, 有时候我们更关心程序的逻辑顺序. 从物理角度看当然事件A和B总是有先后顺序或者同时发生, 但是在分布式系统中你非常难判断两个事件发生的先后顺序, 无论是NTP还是原子钟, 都存在误差, 你永远无法同步两台计算机的时间, 不考虑重力和加速度对时间的影响, 在同一个物理时刻t发生了一个事件x, A节点在他的时间参考系内可能会认为x发生在 t – 1ns, 而B节点可能认为在它自己的时间参照系里x发生在t+1ns的时刻. 这2ns就是A和B不同步造成误差. 假设我们把模型缩小到单个计算机, 想象一下两颗CPU在主板上的距离如果有3CM, 假设信号可以通过接近光速传递, 那么两颗处理器之间这3CM就要传输任何信息至少有1ns的延迟, 而两个处理器分别会有自己的时间参考系, 二者之间必然有差别, 从更宏观的角度来看, 在一个分布式系统中一个节点看到另外一个节点的计算结果, 就像我们通过天文望远镜看其他星系一样, 那已经是几亿年之前的历史了, 我们永远无从得知现在那个星系是什么样子, 甚至是否还存在. 所以依赖于物理时间我们是很难找到事件的顺序的. 两个事件的先后关系在分布式系统或者多路处理器系统中只能退化为先后顺序的偏序关系(partital order), 有时候只要能找出两个事件的因果关系就行, 并不需要物理时钟, 有时候甚至因果关系(causal relation)都不重要, 本系文章后面要介绍的PRAM和Weak Consistency就不需要因果关系.
 
 Leslie Lamport是分布式系统一致性研究的早期科学家, 图灵奖获得者, 他在1978年的论文[[1]](#参考)中提出了一个分辨分布式系统中的事件因果关系的算法, 后来大家把它叫做Lamport Timestamp或者Lamport Clock. Lamport Clock是一种表达逻辑时间的逻辑时钟(logical clock), 它让我们能够把所有的历史事件找到偏序关系, 而且不仅在各自节点的逻辑时间参考系内顺序一致, 全局上的顺序也是一致的. 有人会问, 我用一个全局的锁服务来协同处理不就好了么, 干嘛搞一个这么复杂的东西, 其实不然, 全局协同服务有单点故障的问题, 另外全局锁是通过互斥(mutal exclusion)让整个系统串行化, 但是这样子整个系统就失去了并发能力, 而且某个进程的失效可能会导致整个系统进入等待状态. 那么有人问了, 如果允许并发不用互斥, 但是让一个全局的scheduler作为法官来根据他自己对整个系统的观察来决断事件的历史顺序可以么? 答案是, 也不行. 举个例子, 下图中P0假设是全局的scheduler, 他作为法官一样来解读系统中事件的顺序. P1如果发了一个事件消息A给P0, 然后再发一个事件消息B给P2, P2接收到B之后再发一个事件消息C给P0, 我们用X->Y来表示"X早于或者同时于Y"的偏序关系,那么从P0的角度来看A->C, 从P1看起来是A->B, P2看到的是B->C, 由偏序关系的传导性, 我们知道事件的全局顺序应该就是A->B->C, 没有冲突矛盾, 很不错对吧.
 
-<img src="/images/2015-11-23/lc1.png" max-height="500px">
+<img src="../images/2015-11-23/lc1.png" max-height="500px">
 
 但是消息的传递在分布式系统中要经过网络, 在多路处理器中要经过cache coherence协议, 如果A消息耗时比较久, 在C之后才到达P0呢?
 
-<img src="/images/2015-11-23/lc2.png" max-height="500px">
+<img src="../images/2015-11-23/lc2.png" max-height="500px">
 
 这时候, 从P0的角度来看 C->A, 从P1的角度来看A->B, 从P2的角度来看B->C, 看出来没, P1和P2的观点还好, 但是P0和P2的观点就互相矛盾了. 如果P0和P1是正确的, 因为C->A并且A->B, 根据传导性, 那么应该有C->A->B, 也即是C->B, 而P2看来B->C, 他们的观点互相矛盾了, 结点彼此看到的全局顺序的不一致了. 有些应用场景可以接受这种情况, 但是有些应用场景是不能接受这种情况的.
 
@@ -54,7 +54,7 @@ Leslie Lamport是分布式系统一致性研究的早期科学家, 图灵奖获�
 
 Lamport在他的论文中举了一个例子, 下面的图中P/Q/R是三个进程(这里的进程可以是多路处理器系统其中的一个处理器, 也可以是分布式系统中的一个节点), 从下往上代表物理时间的流逝, p1, p2, q1, q2, r1, r2 …. 表示事件, 严格讲这些事件因为有起始和结束过程, 应该是沿着时间线的一段加粗线, 这里为了简化, 缩小到了一个点. 波浪线表示事件的发送, 比如p1->q2表示 P把p1事件发送给了Q, Q接受此消息作为q2事件. 假设C是Lamport Clock, 并且是一个单调递增的计数器函数, 那么C应该满足任何两个事件a, b, 如果存在偏序关系(a先于或同时于b发生) a->b, 必然有C(a) < C(b).
 
-<img src="/images/2015-11-23/lc3.png" max-height="500px">
+<img src="../images/2015-11-23/lc3.png" max-height="500px">
 
 图片来源: Time, Clocks, and the Ordering of Events in a Distributed System
 
@@ -68,7 +68,7 @@ Lamport在他的论文中举了一个例子, 下面的图中P/Q/R是三个进程
 
 这样刚才的图就可以变成下面的图:
 
-<img src="/images/2015-11-23/lc4.png" max-height="500px">
+<img src="../images/2015-11-23/lc4.png" max-height="500px">
 
 图片来源: Time, Clocks, and the Ordering of Events in a Distributed System
 
@@ -88,23 +88,23 @@ Leslie Lamport在Lamport Clock之后第二年1979年发表了一篇论文 "How t
 
 第一个要求比较容易理解, 给个例子: 假设有四个进程P0, P1, P2, P3分别读取和写入一个变量x, 横轴从左往右表示物理时间的流逝. 对于下图中A的情况这就是大家比较容易理解的情况, 这就是Sequential Consistency. B图中你可能觉得, 好像P2和P3读出来的x变量顺序和物理时间不一致了么, 但是对于P2和P3来说, 他们虽然对x的历史的顺序和真实物理时间不一致, 但是P2和P3至少"错的一致"啊, 所以只要P0, P1, P2, P3全体都认为x是先被P1写入的2, 后被P0写入的1, 那么我们认为这种情况仍然是一致的. 这是符合Sequential Consistency的第一个条件的.
 
-<img src="/images/2015-11-23/sc1.png" max-height="500px">
+<img src="../images/2015-11-23/sc1.png" max-height="500px">
 
 如果像下面这样, 那么P3和P2互相就不一致了, 这就不能满足sequential consistency了.
 
-<img src="/images/2015-11-23/sc2.png" max-height="500px">
+<img src="../images/2015-11-23/sc2.png" max-height="500px">
 
 如果对于x的两次写入都是发生在同一个进程, 比如P0, 那么前面B的情况也不符合Sequential Consistency了. 为什么呢? 因为这样此P0就不符合program order了. 我们来看Lamport的定义中第二个方面关于program order的解释.
 
 第二个方面对于没有多线程开发经验的工程师稍微难理解一些. 比如两个进程P1, P2上发生的事件分别是1,2, 3, 4和5, 6, 7, 8, 如下图所示. 那么从全局来看我们必须要让事件交错成一个有序的集合. 从下图右边global-1的观点来看这样的交错和P1/P2是符合Sequential Consistency的, 但是global-2就不是, 其中1,4,3,2的顺序并不是P1的"program order". 第一种情况中P1和P2的原始顺序在交错中仍然得到了保留, 这个过程叫做arbitrary order-preserving interleaving.
 
-<img src="/images/2015-11-23/sc3.png" max-height="500px">
+<img src="../images/2015-11-23/sc3.png" max-height="500px">
 
 不熟悉多线程编程的工程师可能会问, 为什么P1和global-2中对于3和2的顺序有不同的观点? 为什么program order还会变? 我这里稍微解释一下CPU读写内存的工作原理, 熟悉C++/Java内存模型的程序员可以跳过这部分.
 
 下面是典型的志强两路处理器的样子. 每个处理器的每个core有自己的L1/L2 cache, 所有的core共享L3 cache, 然后两颗处理器之间通过环形QPI通道实现cache coherence. 这样, 整个cache系统就成为了所有处理器核心看内存的窗口, 或者说是唯一事实.
 
-<img src="/images/2015-11-23/sc4.png" max-height="500px">
+<img src="../images/2015-11-23/sc4.png" max-height="500px">
 
 处理器的一个cycle很快, 1ns都不到, 而内存访问很慢, 需要几百个cycle了, 就算是最快的L1的访问也需要三个cycle, 只有寄存器能跟得上CPU cycle, 所以为了充分利用处理器, 在core和L1之间插入了接近寄存器速度的MOB(Memory Ordering Buffers). 上图因为空间有限只画了Load Buffer和Store Buffer, 其实还有其他类型的buffer比如WCB(Write Combine Buffer).
 
@@ -143,7 +143,7 @@ Leslie Lamport为此提出了如何实现sequential consistency的内存访问:
 
 大家或许注意到了, Sequential Consistency对于时间不敏感, 只要存在一致的全序关系即可, 所以又出现了对时间敏感, 一致性强于Sequential Consistency的Linearizability.
 
-<img src="/images/2015-11-23/leslie_lamport.jpg" max-height="500px">
+<img src="../images/2015-11-23/leslie_lamport.jpg" max-height="500px">
 
 "考古学家" Leslie Lamport, 图片来源: wikipedia
 
@@ -162,11 +162,11 @@ Linearizability模型的一致性高于 sequential consistency, 有时候也叫�
 
 那么在不违背队列的正确行为的前提下, S就是H的一个linearization. 下面的例子中, 最左边是物理时间上发生的H, 中间是补齐成对之后的H', 右边是H'的一个linearization.
 
-<img src="/images/2015-11-23/linear1.png" max-height="500px">
+<img src="../images/2015-11-23/linear1.png" max-height="500px">
 
 用通俗但是不严谨的话来说, Linearization蕴含了两个特性, 第一, S中的事件起始/结束是"紧挨着"的表示粒度上必须是整个事件, 事件之间不能交错, (就是假设一个调用的结束事件返回之前我们就认为事件已经完成了, 把并发的调用时间缩短来产生顺序关系). 第二, H中全序关系延续到S中, 说明S仍然存在原始事件的物理时间的顺序. 如果你没看明白这么拗口的定义, 没关系, 看看下面这个图你就很容易明白了.
 
-<img src="/images/2015-11-23/linear2.png" max-height="500px">
+<img src="../images/2015-11-23/linear2.png" max-height="500px">
 
 并不是所有的情况都是Linerizable的, 比如我们的队列行为是这样的:
 
@@ -197,7 +197,7 @@ Linearizability模型的一致性高于 sequential consistency, 有时候也叫�
 
 你要是觉得这种定义很晦涩, 没关系, 用通俗的语言来讲, 就是A写入了x结束后, 接下来B一定能读出来, 这虽然不严谨, 但是确实是Linearizability的本质. 下图中从左往右是物理时间, 长条是指我们观察到的一个事件的开始和结束, 其中P0把x的值从0改写为1. 长条是一个事件的时间窗口. 这个过程中如果P1去读取x, 如果P1的读和P0的写在时间上有重叠, 二者是并发的, 那么P1读出来的无论是0还是1, 都算符合linearizability, 你认为P1的读事件发生在P0的写事件之前或者之后,都可以. P2和P0之间也是这样. 但是P2和P1读取x的结果必须是要么0-0, 要么0-1, 要么1-1, 但是不能是1-0. 最后的P3因为起始晚于P0的结束, 所以要符合linerizability就只能读出x=1才行, 我们必须认为P3的读事件发生在P0的写事件之后.
 
-<img src="/images/2015-11-23/linear3.png" max-height="500px">
+<img src="../images/2015-11-23/linear3.png" max-height="500px">
 
 当事件之间没有重叠, 中间有个"小间隔"的时候, Linearizability必须给出明确的先后顺序. 而前面介绍的sequential consistency则不需要这样的要求,  如果上面的例子中如果P3读出来是0, 那么也是符合Sequential Consistency的.
 
@@ -205,7 +205,7 @@ Linearizability模型的一致性高于 sequential consistency, 有时候也叫�
 
 下面是Herlihy和Wing的论文中给出的例子, 大家可以看看, 哪些是符合Linearizability的?
 
-<img src="/images/2015-11-23/linear4.png" max-height="500px">
+<img src="../images/2015-11-23/linear4.png" max-height="500px">
 
 图片来源: Linearizability : A Correctness Condition for Concurrent Objects
 
@@ -213,13 +213,13 @@ Linearizability的两个很好的特性Locality和Non-blocking, 有兴趣的同�
 
 Linearizability和Sequential Consistency你可以把它们想象成一个烧烤架, 上面有很多烤串, 你不可以把肉和洋葱在一个烤叉上互换位置(单个进程需要符合program order), 但是你可以拨动所有烤叉上的肉和洋葱, 让他们从左往右排列出来一个先后顺序. 不管是Linearizability还是Sequential Consistency, 那么下面A和C谁在前面都可以, 因为A和C是并行的, 但是C和B在Linearizabiltiy中必须C在前B在后, 而Sequential Consistency中B和C的顺序可以互换.
 
-<img src="/images/2015-11-23/linear5.png" max-height="500px">
+<img src="../images/2015-11-23/linear5.png" max-height="500px">
 
 这么看Linearizability和Sequential Consistency是不是很像? 过去绝大多数人会认为Linearizability的定义只是比Sequential consistency多了一个物理时间先后的约束, 所以认为他们很像, 甚至认为它们基本是一个东西, 性能也应该差不多. 但是后来以色列科学家Hagit Attiya和Jennifer Welch在1994年发表的论文让大家意识到他们其实是完全不同的概念, 性能差别很大. (Sequential Consistency versus Linearizabiltiy, ACM Transactions on Computer Systems, Vol 12, No 2, May 1994, Pages 91-122) 过去人们在探讨这两种一致性模型的时候没有真正分析过他们的理论上的性能差别, Attiya第一次给出了具体的分析.
 
 假设我们的网络延迟有一个上限d (尽管现实中不可能, 这里纯粹做理论分析用), 那么最慢和最快的请求波动在u以内. 论文证明了下图中上半部分绿色四边形是Linearizability的性能根据读写比例从u/4到u/2, 下面黄色三角形是Sequential Consistency的性能, 最糟糕不会超过d * 2. 从性能角度来看, 二者的差别还是巨大的.
 
-<img src="/images/2015-11-23/linear6.png" max-height="500px">
+<img src="../images/2015-11-23/linear6.png" max-height="500px">
 
 至于Linearizability的实现, 可以说是所有一致性模型里最丰富的了, 我们会在本系列下一篇文章中介绍.
 
@@ -243,4 +243,5 @@ Linearizability和Sequential Consistency你可以把它们想象成一个烧烤�
 2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)
 3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)
 4. [Eventual Consistency](/history-of-distributed-systems-4)
+5. [Serializability Consistency, External Consistency](/history-of-distributed-systems-5)
 

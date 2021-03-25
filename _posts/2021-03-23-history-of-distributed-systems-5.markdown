@@ -3,7 +3,7 @@ layout: post
 title:  "分布式系统一致性的发展历史 (五)"
 Subtitle: "Serializability Consistency, External Consistency"
 date:   2021-03-23 18:00:00
-published: false
+published: true
 ---
 
 ## Overview
@@ -107,7 +107,7 @@ Sb: {a2l, a22, a23, all, a12, a13}.
 
 > Linearizability, by contrast, is intended for applications such as multiprocessor operating systems in which concurrency is of primary interest, and where programmers are willing to apply special-purpose synchronization protocols, and to reason explicitly about the effects of concurrency. 
 
-# External Consistency
+## External Consistency
 
 In 1981, David Gifford第一次定义了External Consistency. 他先定义了一个Causal依赖模型（为了更容易理解，我对原文稍微做了一点点调整）
 
@@ -136,9 +136,7 @@ In 1981, David Gifford第一次定义了External Consistency. 他先定义了一
 
 假设一个人有个账户，有Serial consistency就可以保证两个事务并发时，通过排除了并发行保证数据的一致性。比如一个账户的期初余额200元，然后一个事务T1转入100元，一个事务T2转出100元，我们不会发生一个写入300(200+100)， 一个写入100(200-100)的情况，一定是要么先写入300再写入200，或者先写入100再写入200。而更严格的external consistency(serializability consistency)增加了实时性要求，这样子客户总是可以看到最新的结果。也就是说如果这两个事务有先后关系(T1 finishes commit before T2 starts)， 那么客户看到账户变化历史一定是200 -> 300 -> 200的顺序。如果两个事务是并行的，可以通过Conflict/View做等价串行化变换，那么两个事务不管结果是什么顺序，所有进程都要看到同样的历史。
 
-总之，在我看来Strict Serializable和External Consistency基本是一个概念[待验证，如有错误欢迎指正]。
-
-
+总之，在我看来Strict Serializable和External Consistency基本是一个概念[如有错误欢迎指正]。
 
 External Consistency在单节点系统上实现并不难，但是在高并发的分布式系统中实现则非常困难。Google的Spanner是最具代表性的实现了External Consistency的超大规模分布式系统。在James Corbett 和大神 Jeff Dean的论文[[4]](#参考)中描述了Spanner是如何通过TrueTime来实现的External Consistency级别的snapshot read，有兴趣的同学可以自己看一下。
 
@@ -151,5 +149,17 @@ External Consistency在单节点系统上实现并不难，但是在高并发的
 3. David K. Gifford. "Information Storage in a Decentralized Computer System". *CSL-81-8 June 1981; Revised March 1982*
 4. James C. Corbett, Jeffrey Dean "Spanner: Google’s Globally-Distributed Database" *Proceedings of OSDI 2012*
 5. Murat Demirbas,  Sandeep Kulkarni. *"Beyond TrueTime: Using AugmentedTime for Improving Spanner"*
+
+
+
+# 系列文章目录
+
+1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
+2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)
+3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)
+4. [Eventual Consistency](/history-of-distributed-systems-4)
+5. [Serializability Consistency, External Consistency](/history-of-distributed-systems-5)
+
+
 
 

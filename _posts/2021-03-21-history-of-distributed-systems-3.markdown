@@ -115,10 +115,13 @@ Let a synchronization model be a set of constraints on memory accesses that spec
 6. Michel Dubois, Christoph Ernst Scheurich, Fayé Alaye Briggs. "Memory access buffering in multiprocessors" *0884-7495/86/0000/0434S01.00 © 1986 IEEE*
 7. S. V. Adve and M. D. Hill, "Weak ordering-a new definition," *[1990] Proceedings. The 17th Annual International Symposium on Computer Architecture*, Seattle, WA, USA, 1990, pp. 2-14, doi: 10.1109/ISCA.1990.134502.
 
+
+
 # 系列文章目录
 
 1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
 2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)
 3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)
 4. [Eventual Consistency](/history-of-distributed-systems-4)
+5. [Serializability Consistency, External Consistency](/history-of-distributed-systems-5)
 

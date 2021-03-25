@@ -9,7 +9,7 @@ published: true
 
 在本篇正式开始之前, 我们先定义一下分布式系统中的网络和故障的模型, 这部分稍微有点枯燥, 但是很重要, 了解他们才能继续阅读本文. 为了缩短篇幅，我把这部分内容摘到一篇独立短文，请先阅读[分布式系统中的网络模型和故障模型](/network-failure-models).
 
-# Consensus问题
+## Consensus问题
 
 之所以要介绍Consensus问题是因为Consensus问题是分布式系统中最基础最重要的问题之一, 也是应用最为广泛的问题, 他比其他的分布式系统的经典问题比如self-stabilization的实际应用要多, 我们可以通过介绍Consensus问题来更加深入得介绍一下之前提到的Linearizability和Sequential Consistency.
 
@@ -27,7 +27,7 @@ Consensus要满足以下三个方面: termination, agreement 和 validity. 这�
 
 在同步网络中因为所有节点时间偏移有上限, 所有包的传输延迟也有上限, 节点会在一个round内完成计算并且传输完成, 所以一旦超过一定时间还没有收到返回的消息, 我们就可以确定要么网络中断要么节点已经crash. 但是我们现实当中都是异步网络, 传输延迟是没有固定上限的, 当很长时间一个节点都没有返回消息的时候, 我们不知道是这个节点计算速度太慢, 还是已经crash了. 如果是这个节点计算太慢, 超时之后, 过了一会这个节点又把结果再发回来了, 这就超出crash-stop故障模型的范围了, 这种情况需要用crash recovery的模型来解决. 在异步网络中无法区分crash和包延迟会导致consensus问题非常难解决.
 
-# 两阶段提交和三阶段提交, Two Generals Paradox, 1975 - 1981
+## 两阶段提交和三阶段提交, Two Generals Paradox, 1975 - 1981
 
 两阶段提交(two phase commit) 或者又简称为2PC是解决consensus问题的一个方法. 在Paxos算法出现之前, Jim Gary在在Leslie Lamport那篇开山之作的同年1978年提出了two phase commit的概念[[2]](#参考), 图灵奖获得者Jim Gary是分布式事务的专家, 他所设计的2PC的主要用途是实现分布式事务, 让两个数据库或者队列参与同一个分布式事务. 这个过程中有Coordinator负责协调各个资源参与者(cohort)去提交或者回滚自己的事务. 首先coordinator会通知所有cohort告诉他们要提交的内容, 如果cohort写入成功(这时还没有提交), 那么cohort返回同意的应答给coordinator. 然后coordinator收集到全部的应答之后如果有任何一个应答是拒绝的(某个cohort写入失败), 那么coordinator就通知所有cohort回滚, 否则通知所有cohort提交.
 
@@ -78,7 +78,7 @@ Two Generals Paradox在1975年被提出[[3]](#参考), 但是广为人知还是�
 
 其中前两点就暗示了网络会有分区, 这时节点的故障判断非常困难. 2PC和3PC假设节点的故障判断非常容易, 就是超时, 并且假设节点故障之后不会自动恢复. 这种假设叫做crash-stop, 意思就是说我看不到你就认为你挂了, 有点像王阳明的”你未看此花时，此花与汝心同归于寂”, 在分布式系统中这种故障模型的假设是比较窄的. 你必须要假设你看不到他的时候, 他也可能活着, 说不定过了几秒钟他可能又给你发消息和你交互了. 在大多数情况下, 我们至少要把故障模型放大到crash-recovery.
 
-# Byzantine Generals Problem
+## Byzantine Generals Problem
 
 前面提到的Two General Paradox实际上是一个弱化的Byzantine Generals Problem. 1982年, Leslie Lamport和另外两位科学家年发表了一篇论文阐述 "The Byzantine Generals Problem"[[5]](#参考)描述了更一般化的情况, 这种情况下不仅是网络会有故障, 节点本身也会有不按照逻辑执行的问题. 比如一个叛徒将军乱发消息或者不按照程序逻辑执行. 完整的拜占庭将军问题更加复杂, 必须加以特定场景的假设才能解决, 比如同步网络. 这个问题比较复杂, 本文只是简要介绍一下.
 
@@ -94,7 +94,7 @@ Two Generals Paradox在1975年被提出[[3]](#参考), 但是广为人知还是�
 
 图片来源: 维基百科, Barbara Liskov 2010
 
-# FLP Impossibility, 1985
+## FLP Impossibility, 1985
 
 分布式事务作为Consensus类型问题, 在异步网络中非常难实现. 很多科学家们做了很多伟大的尝试, 包括2PC, 3PC, 等等, 但是1985年的时候, 一个重要的论文告诉了我们答案, 这就是著名的FLP Impossibility:[[6]](#参考)
 
@@ -123,7 +123,7 @@ FLP中设计的模型是一个比现实情况要更可靠的模型, 当然了, �
 
 Saga这种方法并不适合所有的情况, 它也不是银弹, 但是它是比2PC/3PC更适合来解决分布式事务. 2PC/3PC的思路是想在源头上阻止分布式事务不一致的产生, 但这是不可能实现的. 不一致是常态, 不是异常, 异步网络中能容忍节点故障的total correct的consensus算法不存在.
 
-# 大名鼎鼎的Paxos算法 1990 – 2001
+## 大名鼎鼎的Paxos算法 1990 – 2001
 
 Consensus主要目的是屏蔽掉故障节点的噪音让整个系统正常运行下去, 比如选举过程和状态机复制. 所以Consensus问题对于agreement条件做了放松, 它接受不一致是常态的事实, 既然我无法知道某些节点是挂了还是暂时联系不到, 那我只要关心正确响应的节点, 只要表决能过半即可, 过半表决意味着虽然没有完全一致, 但是”投票结果”被过半成员继承下来了, 这是因为任何两个quorum一定会存在交集(想象一下有A/B/C三个节点, 两个quorum比如AB和AC一定会有A是交集), 所以不管有多少个quorum存在, 我们能确保他们一定会有交集, 所以他们一定能信息互通而最终达成一致, 其他没有达成一致的成员将来在网络恢复后也可以和这部分交集内的节点传播出去的”真理”达成一致.
 
@@ -171,7 +171,7 @@ Paxos设计的时候把异步网络的不确定性考虑在内, 放松了livenes
 
 因为Paxos家族的算法写性能都不是很好但是一致性又很重要, 所以实现中我们经常做一些取舍, 让Paxos只处理最关键的信息. 比如Kafka的每个Partition都有多个replicas, 日志的复制本身没有经过Paxos这样高延迟的算法, 但是为了保证负责接受producer请求和跟踪ISR的leader只有一个, Kafka依赖于Zookeeper的ZAB算法来选举leader. 在实际应用中, 状态机复制不太适合很高的吞吐量, 一般都是用于不太频繁写入的重要信息. Zookeeper不能被当做一个OLTP级的数据库用, 它不是分布式系统协同的万能钥匙.
 
-# Uniform Consensus
+## Uniform Consensus
 
 对于Consensus问题, 我们只关注非故障节点的一致性和整体系统的正常, 而Uniform Consensus中要求无论是非故障节点还是故障节点, 他们都要一致, 比如在分布式事务的前后, 各个节点必须一致, 故障节点恢复后也要一致, 任何时刻都不应该有两个参与者一个决定提交, 一个决定回滚. 很长一段时间内大多数人没有把Uniform Consensus单独分类, 直到2001年才有人提出Uniform Consensus更难[[8]](#参考).
 
@@ -181,11 +181,11 @@ Paxos设计的时候把异步网络的不确定性考虑在内, 放松了livenes
 2. agreement: 所有进程(包含故障节点恢复后)必须同意同一个值. (假设系统没有拜占庭故障)
 3. validity: 最终达成一致的值必须是V1到Vn其中一个, 如果所有初始值都是vx, 那么最终结果也必须是vx.
 
-# 小结
+## 小结
 
 至此, 通过对Concensus问题的介绍, 我们对Linearizability和Sequential Consistency的应用应该有了更深入的理解, 在本系列下一篇文章中我们将会介绍性能更好但是一致性要求更低的Causal Consistency, PRAM以及不需要硬件自动同步的一致性模型, 比如Weak Consistency. 敬请期待. 文中的错误请通过电子邮箱daniel.y.woo@gmail.com发送给我, 因为微信不能更新已经发布的文章, 所以我会在<a href="https://danielw.cn">danielw.cn</a>更新.
 
-# 参考
+## 参考
 1. Miguel Castro and Barbara Liskov. "Practical Byzantine Fault Tolerance" *Proceedings of the Third Symposium on Operating Systems Design and Implementation, New Orleans, USA, February 1999*
 2. Jim Gray. "Notes on data base operating systems" *In Operating Systems: An Advanced Course, R. Bayer, R. M. Graham, and G. Seegmuller, Eds. Lecture Notes in Comp*
 3. Dale Skeen. "Nonblocking commit protocols" *SIGMOD '81 Proceedings of the 1981 ACM SIGMOD international conference on Management of data*
@@ -195,7 +195,7 @@ Paxos设计的时候把异步网络的不确定性考虑在内, 放松了livenes
 7. Leslie Lamport. "The Part-Time Parliament" *ACM Transactions on Computer Systems 16, 2 (May 1998), 133-169*
 8. Bernadette Charron-Bost, André Schipe. "Uniform Consensus is Harder Than Consensus" *Journal of Algorithms Volume 51 Issue 1, April 2004*
 
-# 系列文章目录
+## 系列文章目录
 
 1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
 2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)

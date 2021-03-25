@@ -70,12 +70,12 @@ Eventual: 所有进程互相看到的写无序, 但最终一致。不对跨进�
 
 其他还有一些在分布式系统中不太常用的一致性模型在此就不做介绍了。 至此我们讲的这些一致性模型都是基于单个值的读写模型，接下来我们会讲另外一类一致性模型，是基于多个操作的具有隔离性的事务的一致性模型。
 
-# 参考
+## 参考
 
 1. Werner Vogels "Eventual Consistency" *Communications of the ACM, January 2009, Vol. 52 No. 1, Pages 40-44 10.1145/1435417.1435432*
 2. Michel Dubois, Christoph Ernst Scheurich, Fayé Alaye Briggs. "Memory access buffering in multiprocessors" *0884-7495/86/0000/0434S01.00 © 1986 IEEE*
 
-# 系列文章目录
+## 系列文章目录
 
 1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
 2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)

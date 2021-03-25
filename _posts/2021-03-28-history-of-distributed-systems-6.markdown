@@ -1,33 +1,49 @@
 ---
 layout: post
 title:  "分布式系统一致性的发展历史 (六)"
-date:   2015-11-27 19:18:45
+date:   2021-03-25 18:00:00
 published: false
 ---
 
-尽管我想按照历史顺序来介绍分布式系统历史上出现的各种模型，但是实际上分布式系统的发展不是线性的，本文作为此系列的终结篇，会介绍一下CAP和FLP。
+尽管我想按照历史顺序来介绍分布式系统历史上出现的各种模型，但是实际上分布式系统的发展不是线性的，原谅我无法严格按照时间来介绍所有的重要模型。我们之前已经介绍过了所有的主要一致性模型，本文作为此系列的终结篇，不再介绍一致性模型了，我来介绍一下CAP Theorem和FLP Impossibility。
 
 ## CAP Theorem
 
-CRDT
-lattice consistency
-https://aphyr.com/posts/294-jepsen-cassandra
-PN-counter
-G-sets 2P-sets, OR-sets
+加州伯克利教授Eric Brewer开办了一家叫做Inktomi的创业公司， 为eBay，Walmart等客户提供代理和缓存软件服务。在设计和实现这些分布式系统的时候，Eric Brewer和他的学生产生了CAP猜想。1998年Eric Brewer和他的学生Armando Fox发布了论文 “Harvest, yield, and scalable tolerant systems”[[1]](#参考), 首次提出了CAP猜想。但是真正让CAP广为人知的是两年后PODC 2000会议上Brewer有一个主题叫做Towards Robust Distributed Systems, 在他讲ACID vs BASE的时候把CAP猜想从学术领域进入了工程领域, 引起了大家的关注和思考。在这次分享中，他提出了传统单节点数据库是符合ACID的，而很多分布式系统是BASE类型的，其实我们设计一个存储系统的时候并不是这样二选一，他猜想应该是一个spectrum， 应该还有介于二者之间的选择。因此他提出了CAP猜想，C代表一致性，A是可用性，P是网络分区容忍性。那么ACID的系统其实就是选择了C和A的单节点数据库，BASE就是选择了A和P的就是不能提供strong consistency的分布式系统，而二者之间还有选择了C和P不能满足高可用的分布式系统。简单讲，CAP只能pick two。下图是当时他展示的slides。
+
+<img src="../images/2021-03-26/CAP.jpg" max-height="500px">
+
+但是Brewer在PODC 2000上提出的CAP猜想并没有非常严谨的模型, 他自己其实说的也不太明白。比如Consistency指的是啥意思？Linearizability还是Sequential Consistency? Partition-Tolerance是指分区的时候, 系统能怎样正常工作? 再加上有时候<b>工程领域的很多人其实并不具备完善的理论知识</b>, 导致社区里产生了一些跑偏的讨论, 甚至有人愤怒的说说CAP is CRAP。 直到2002年，MIT的Nancy Lynch和她的学生Seth Gilbert才一起发表了对于CAP的formalization和证明 [[2]](#参考)， 至此CAP conjecture变成了CAP Theorem。
+
+首先论文里先建立了一个Atomic Data Objects的模型, 这个模型里明确指出C是指Linearizability, A是指non-failing node必须返回结果(可能返回的结果不一定正确，达不到Linearizability, 但是一定会返回结果而不是无限循环或者失败), 并且不对相应时间有上限要求。实际工程中10年没有响应还能算是Available么？这里只是个理论模型，实际工程中会有更严格的超时限制。P是指网络断开为两个以上的分区的时候, 节点之间会丢失消息。除非你设计了一个单节点的系统，否则在分布式系统中这其实不是一个Option, 这是一个不可避免的事实。 另外, 模型处于异步网络中 (没有全局时钟, 消息延迟没有上限，关于异步网络的定义请阅读[分布式系统中的网络模型和故障模型](/network-failure-models))。下面我们看一下Nancy Lynch和Seth Gilbert的证明过程.
+
+定理1
+>It is impossible in the asynchronous network model to implement a read/write data object that guarantees the following properties
+> * availability
+> * atomic consistency
+> 
+>in all fair executions (including those in which messages are lost)
+
+假设存在算法A在这个模型里满足CAP, 所有的节点被分区为两个非空离散集G1和G2, 发生了分区导致二者之间的消息全部丢失. 这种情况下如果G1里有一个对atomic data object v0的写更新操作, 我们称之为a1, 为了满足Availability这个写操作a1必然要成功, 然后G2如果要读这个v0, 我们称之为a2, 由于期间G1/G2之间没有通信, 如果要满足G2的Availability, a2只能返回一个旧的值, 这就不满足Consistency. 更正式的证明可以参考原论文 [[2]](#参考)，非常简单，你大概5分钟就可以看懂.
+
+由此, CAP从conjecture变成了theorem.
+
+## 12年后
+尽管我们有了CAP的理论支撑，但是在现实的工程领域中网络分区是非常复杂的, 有单向不通的, 还有的场景需要考虑客户端的连通性, 工程领域经常还是有一些误解. 12年后, 2012年5月Brewer教授又发表了一篇文章 [[3]](#参考) 回顾了他的一些思考 （其中我们可以看到之前PODC 2000的slides上他在ACID和BASE下写了一句"I *think* it's a spectrum"其实已经埋下了伏笔）。 在这篇文章里他再次强调了CAP不是简单的三选二, 其实我们很多时候都是A和C之间的平衡, 比如在确保A的情况下最大化的确保C (AP but best-effort consistency). Eric在这篇文章中讲到: The modern CAP goal should be to maximize combinations of consistency and availability that make sense for the specific application.
+
+文中也提及了Latency的问题, 原始的CAP并不是建立在Lynch定义的异步网络模型上的, 实际上压根就没怎么提及网络延迟. 当一个节点运行算法遇到消息延迟的时候这个节点要么返回可能是过期的数据牺牲C, 要么终止执行返回错误代码. 即便你用paxos或者其他算法在这种情况下也只是延迟决定, 一个可以terminate的算法最终你需要做一个决定, 这个决定Brewer称之为Partition Decision.
+
+Partition Decision在工程实现中是非常难的, 因为异步网络模型里网络中断和超时是比较难判断的, 假设你的算法判断基于比较短的超时, 那么某些节点可能误判导致另外一些节点进入了分区状态, 造成不必要的数据迁移(比如ElasticSearch的shard rebalance)或者服务降级(比如zookeeper少数派分区失去可用性). 如果基于比较长的超时, 那么每个节点可能对分区故障不敏感, 可能会导致系统更慢的从故障中恢复. 比如elastic search有一个参数, 用来设定在其他节点发现一个节点无法通讯时,  延迟多久再rebalance shards. 如果你设定非常短, 那么一旦有网络拥堵或者某个节点过载就会立即rebalance, 然后重新可以支持写入, 又会产生不必要的频繁rebalance, 副作用就是这段时间内部分shard的写入会失败, 丢失了可用性.
+
+同年2月, 除了Brewer这篇文章之外, Nacy Lynch和Seth Gilbert也发表了一篇论文Perspectives on the CAP Theorem [[4]](#参考)再次对CAP做了思考和扩展,  两位作者认为其实CAP可以更加泛化, 并提出了一些工程方案.
+
+论文里对CAP扩展核心的一句话是:
+The CAP Theorem is simply one example of the fundamental fact that you cannot achieve both safety
+and liveness in an unreliable distributed system.
 
 
 
-
-
-## FLP Impossibility
-
-
-
-
-
-TODO: in progress
-
- CAP缺乏严格的理论场景, 作为一个theorem他的描述太不严格. 甚至有人说CAP is CRAP. 什么是C? Consistency是指数据库的ACID里的C么? 不是, 其实C是指分布式系统的Linearizability级别的一致性. 但是这一点一直没有说清楚, 直到2012年, Lynch和Gilbert发表了一篇论文[Perspectives on the CAP Theorem]重新阐释了CAP, 才更加确切的定义了C. 文中做一个分布式web service的例子, 其中Consistency的定义依赖于服务的特性, 服务可以分为四类:
+ 直到2012年, Lynch和Gilbert发表了一篇论文[Perspectives on the CAP Theorem]重新阐释了CAP, 才更加确切的定义了C. 文中做一个分布式web service的例子, 其中Consistency的定义依赖于服务的特性, 服务可以分为四类:
 
   1. trivial serivce: 不需要节点交互的服务, 比如转换摄氏度和华氏度. 讨论这个没有意义.
   2. weekly consistent service: 
@@ -123,31 +139,30 @@ unreliable distributed system对应着P, 但是不止于CAP所说的分区忍耐
 
 另外对于CAP和FLP尽管表达了一些共性的问题看似有一些相似, 但是具体还是不同的scope和模型, 有兴趣可以参考一篇不错的文章 History of the Impossibles - CAP and FLP[6].
 
- 
 
- 
+## FLP Impossibility
 
- 
 
+
+
+
+## 参考
 [1] Fox and E.A. Brewer, "Harvest, Yield and Scalable Tolerant Systems," *Proc. 7th Workshop Hot Topics in Operating Systems* (HotOS 99)
-
- 
-
 [2] Brewer's Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services - Seth Gilbert and Nancy Lynch, in ACM SIGACT News
 
- 
-
-[3] CAP Twelve Years Later: How the“Rules”Have Changed
-
- 
-
-[4] Perspectives on the CAP Theorem -
-
- 
-
+[3] E. Brewer, "CAP twelve years later: How the "rules" have changed," *in Computer, vol. 45, no. 2, pp. 23-29, Feb. 2012, doi: 10.1109/MC.2012.37.*
+[4] S. Gilbert and N. Lynch, "Perspectives on the CAP Theorem," *in Computer, vol. 45, no. 2, pp. 30-36, Feb. 2012, doi: 10.1109/MC.2011.389.*
 [5] https://martin.kleppmann.com/2015/05/11/please-stop-calling-databases-cp-or-ap.html
-
- 
-
 [6] History of the Impossibles - CAP and FLP
+
+
+
+CRDT
+lattice consistency
+https://aphyr.com/posts/294-jepsen-cassandra
+PN-counter
+G-sets 2P-sets, OR-sets
+
+
+TODO: in progress
 

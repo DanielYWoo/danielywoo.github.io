@@ -4,7 +4,7 @@ title:  "分布式系统一致性的发展历史 (一)"
 date:   2015-11-23 19:18:45
 ---
 
-# 前言
+## 前言
 
 在一个理想的世界里, 我们应该只有一个一致性模型. 但是多路处理器和分布式系统中的一致性问题是一个非常难以解决的问题. 当系统大多还都是单体应用, 处理器性能提升还是靠缩小晶体管体积的年代, 一致性问题还不是一个非常大的问题, 但是从90年代开始, 互联网公司大量出现, 互联网公司处理的数据量远远超过了人类历史上任何一个时期的传统企业所需要处理的数据量, 大型的互联网公司甚至开始自己采购零部件自己组装服务器, 服务器市场上排名除了IBM, HP之外还出现了"Others". NoSQL已经被互联网公司广泛接受, Micro Service的出现让数据和计算的分布比历史上任何时期都更加的水平, 在这个背景下, 分布式系统给一致性问题带来了巨大的挑战, 理想情况下的一致性模型在分布式系统中几乎无法实现, 所以我们不得不设计应用于不同场景的各种一致性模型.
 
@@ -18,7 +18,7 @@ date:   2015-11-23 19:18:45
 
 本篇文章作为本系列的第一篇文章将会介绍1978年提出的Lamport Clock对分布式系统的启发, 1979年提出的Sequential Consistency和1987年提出的最重要的一致性模型Linearizability.
 
-# 开天辟地: 时间, 事件和顺序, 1978
+## 开天辟地: 时间, 事件和顺序, 1978
 
 狭义上的分布式系统是指通过网络连接的计算机系统, 每个计算节点承担独立的计算和存储, 节点之间通过网络协同工作, 因此整个系统中的事件可以同时发生. 广义上的分布式系统是一个非常相对的概念, 正如Leslie Lamport在1983年PODC大会上讲的那样
 
@@ -74,11 +74,11 @@ Lamport在他的论文中举了一个例子, 下面的图中P/Q/R是三个进程
 
 横向虚线就变成了全局的clock tick, 而每个进程的clock都是一致的. Lamport Clock的作用就是找到潜在的causally related关系, 之后1988年出现的Vector Clock[[2]](#参考)是一个具体实现的算法. 关于Vector Clock, Riak的工程师有两篇非常好的文章大家可以去看看Why Vector Clocks Are Easy 和 Why Vector Clocks Are Hard). 这里受制于篇幅此处不再详细描述, 在后继介绍Causal Consistency的时候会给大家详细介绍. 对于1978年这篇论文有兴趣的同学可以去检索 Time, Clock, and Ordering of Events  in a Distributed System. 这篇论文被认为是分布式系统的一致性问题的开山之作, 其中 max(Ci, Cj) + 1这个单调递增的timestamp后来影响了很多的设计, 比如Vector Clock, 比如一些Conflict-free Replicated Data Types, Paxos和Raft等. 这篇论文也是Leslie Lamport被引用最多的文章(截至2019年10月, 共计11574次), 按照Lamport自己的说法, 这篇论文影响了后人对于分布式系统的一致性问题的思考方式, 而后基于人们对一致性, 性能, 实现难度之间的平衡, 产生了很多不同的一致性模型.
 
-# 理想的一致性模型
+## 理想的一致性模型
 
 对于一致性, 我们需要不同的模型, 不同的级别. 理想的情况下任何事件都准确无误的"瞬时"对其他进程或者节点可见. 比如, 一个服务节点对某个状态的写入, 瞬时可以被另外一个服务器同步复制, 因为"瞬时"的要求, 即便是Lamport Clock本质上是个Logical Clock, 而非Physical Clock, 所以也达不到这个要求. 如果存在这样的模型, 我们不需要通过Logical Clock去找事件之间的因果关系(causality), 事件的结束时间就可以解决事件的全序关系了. 有人称作这种模型叫做strict consistency. 实际上, 这在现实世界上根本不存在这样理想的模型( 除非完全串行化没有任何并发). 两个服务器无论是通过金属电路还是光学载体连接, 都会有传输延迟, 这是物理决定的, 物理时间在分布式系统中永远不可能同步, 因此我们对于一致性的时间要求必须降低, 比如Linearizability(strong consistency)或者Sequential consistency. 实际中我们经常比较关心两个有因果关系的事件的顺序而对于可以并行无因果关系的事件我们不太关心他们的顺序, 再考虑到并发能力和实现难度. 我们需要多种不同的一致性模型.
 
-# Sequential Consistency, 1979
+## Sequential Consistency, 1979
 
 Leslie Lamport在Lamport Clock之后第二年1979年发表了一篇论文 "How to Make a Multiprocessor Computer That Correctly Executes Multiprocess Program"[[3]](#参考), 提出了Sequential Consistency的概念, 定义如下:
 
@@ -147,7 +147,7 @@ Leslie Lamport为此提出了如何实现sequential consistency的内存访问:
 
 "考古学家" Leslie Lamport, 图片来源: wikipedia
 
-# Linearizability, 1987
+## Linearizability, 1987
 
 Linearizability模型的一致性高于 sequential consistency, 有时候也叫做strong consistency或者atomic consistency, 可以说是我们能够实现的最高的一致性模型. 它是Herlihy and Wing在1987年提出的[[4]](#参考). 通过前面的讨论我们现在知道sequential consistency 只关心所有进程或者节点的历史事件存在唯一的偏序关系, 它不关心时间顺序. 而linearizability相当于在sequential consistency的基础上再去关心时间顺序, 在不依赖物理时钟的前提下, 区分非并发操作的先后. Linearizability是一个很重要的概念, 如果你不了解它你就无法真正理解Raft算法等.
 
@@ -226,18 +226,18 @@ Linearizability和Sequential Consistency你可以把它们想象成一个烧烤�
 如果你耐心看到这里了, 至此, 我们已经开了一个好头, 你一定是对分布式系统的一致性问题很感兴趣, 在本系列下一篇文章中我们将会提到Linearizability和Sequential Consistency的一些应用. 将来我们还会继续介绍Causal Consistency, PRAM, Eventual Consistency这些性能更好但是一致性更弱的模型, 所以, stay tuned!
 
 
-# 参考
+## 参考
 1. Leslie Lamport. "Time, Clocks, and the Ordering of Events in a Distributed System" *Communications of the ACM 21, 7 (July 1978), 558-565*
 2. Colin J. Fidge. "Timestamps in Message-Passing Systems That Preserve the Partial Ordering". *In K. Raymond (ed.). Proc. of the 11th Australian Computer Science Conference (ACSC'88). pp. 56–66. Retrieved 2009-02-13.*
 3. Leslie Lamport. "How to Make a Multiprocessor Computer That Correctly Executes Multiprocess Program". *IEEE Trans. Comput. 28 (9): 690–691.*
 4. Herlihy, Maurice P.; Wing, Jeannette M. (1987). "Axioms for Concurrent Objects". *Proceedings of the 14th ACM SIGACT-SIGPLAN Symposium on Principles of Programming Languages, POPL '87. p. 13*
 
-# 扩展阅读
+## 扩展阅读
 1. <a href="https://riak.com/why-vector-clocks-are-hard/">Why Vector Clocks are Hard</a>
 2. <a href="https://queue.acm.org/detail.cfm?id=2917756">Why Vector Clocks are Easy</a>
 3. <a href="https://www.datastax.com/blog/2013/09/why-cassandra-doesnt-need-vector-clocks">Why Cassandra Does not Need Vector Clocks</a>
 
-# 系列文章目录
+## 系列文章目录
 
 1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
 2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)

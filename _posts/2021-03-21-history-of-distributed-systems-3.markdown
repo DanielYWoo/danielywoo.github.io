@@ -13,7 +13,7 @@ published: true
 本篇文章里我会介绍三个一致性模型: PRAM Consistency, Causal Consistency和Weak Consistency.
 
 
-# Causal Consistency 1991
+## Causal Consistency 1991
 PRAM的模型只能用于一致性要求比较弱, 没有进程间因果关系的场景中. 工程实现中很多时候P之间还是需要有因果关系的。举个例子，facebook上两个朋友可以并发的发出没有任何关联和依赖的两个独立的post, 其他用户的feed里看到这两个人的post谁先谁后并不重要, 我不需要建立post之间他们的全序关系. 但是有两个情况我们需要关心他们的顺序。第一个情况，如果一个人连续发了两个post，那么任何人的feed里都应该看到p1早于p2，这两个事件之间存在causal关系。第二个情况，如果A发了一个post, 然后B 对这个post发了一个reply, 这两个事件也有causal关系, 其他人接受到的这两个事件一定是有顺序的，一定是先看到post再看到reply. 我们称这样的因果关系叫做”causally related”, 与之对应的一致性模型叫做”Causal Consistency”, 这个模型是1991年由乔治亚理工学院的一批科学家提出的[[2]](#参考), 但是它的核心思想已经在更早的Leslie Lamport的那篇著名论文"Time, clocks, and the ordering of events in a distributed system"中已经描述过了, 只是Lamport Clock只告诉了我们potentially causally related事件如何按照一个全局的Logical Clock得到偏序集, 并没有提出一个一致性模型，并且Lamport Clock也无法直接找到具有causal related的关系。比如Lamport Clock里两个事件的timestamp分别是10和11，我们是不能说10对应的事件和11对应的事件是有causal关系的。
 
 下面简单介绍一下Causal Consistency的模型, 在这篇论文中[[2]](#参考)作者回顾了Sequential Consistency和PRAM Consistency然后提出了介于二者之间的一个Causal Consistency模型，定义如下：
@@ -70,7 +70,7 @@ Riak中保证Causal Consistency其实就是Conflict Resolution. 如果客户端�
 
 Causal Consistency因为只约束有因果关系的写和读, 对于不是causally related writes是不关心顺序的, 比如Vector Clock中没有任何操作是悲观阻塞的, 也不像Paxos那样要多个回合, 所以Causal Consistency的实现通常性能比较好. 但是Vector Clock如果在进程数量特别多的时候会有膨胀效应, 尽管有一些对Vector Clock压缩的算法, 但是Vector Clock仍然不是非常适合大量进程的情况. 接下来我们介绍一个更弱更简单, 但是没有这个问题的一致性模型PRAM.
 
-# PRAM, 1988
+## PRAM, 1988
 
 PRAM是Pipelined RAM的缩写. Princeton大学的Richard Lipton和Jonathan Sandberg在1988年的一篇论文中第一次定义了PRAM 的一致性模型[[1]](#参考).
 
@@ -86,7 +86,7 @@ PRAM是Pipelined RAM的缩写. Princeton大学的Richard Lipton和Jonathan Sandb
 
 这个例子中假设P2读取x之后通过一些计算再写入x。这个例子不满足Linearizability因为W(x)1和W(x)2在P4上顺序不对. 然后也不是Sequential Consistency因为P3和P4对x的写入观点不一致, 然后也不是Causal Consistency因为W(x)1和W(x)2是有causal relation, 必须先W(x)1然后再W(x)2, 但是P4两次读取X的结果不遵循这个顺序. 然而, P4是符合PRAM的, 因为W(x)1和W(x)2在两个不同进程上, 所以不需要有全局先后顺序. 简单讲, PRAM模型下每个节点的处理是在其他节点看来一致的, 但不考虑节点之间的处理依赖. 这是一个非常简单的模型, 但是适用场景比较有限，它假设P之间不存在处理的依赖关系。比如Kafka在每个partition上消息有序，但是在整个topic上是无序的.
 
-# Weak Consistency, 1986 – 1989
+## Weak Consistency, 1986 – 1989
 目前包括PRAM在内我们所有介绍过的一致性模型都是系统<b>自动同步</b>的, 这意味着硬件实现上要有很多复杂的设计，而效率一定会收到影响。还记得我们之前介绍Sequential Consistency的时候提到的reordering和memory fence的介绍么? 在Sequential Consistency被定义的时候, 科学家们设计的模型是每个指令都要由硬件去保证顺序和同步, 但是性能会很糟糕, 所以我们今天几乎没有任何一款处理器会在硬件自动提供这样的一致性. Weak Consistency说白了就是硬件提供Memory Fence这样的指令, 让开发人员自己在软件中去发送指令, 然后硬件可以理解这样的指令并同步内存. 
 
 1986年Dubois, Scheurich和Briggs发表了论文[Memory Access Buffering in Multi-processors](#参考)提及到了在多路处理器中weak ordering的概念. 1989年Adve和Hill的论文 [Weak Ordering – A New Definition](#参考)中再次定义了Weak Consistency.
@@ -106,7 +106,7 @@ Let a synchronization model be a set of constraints on memory accesses that spec
 尽管论文里也是把Weak Ordering作为一种consistency model来讲的，但是我觉得他其实算不上，他只能算是一个工程实现的模式。其实你的synchronization model如果要求任何操作都要按照实际发生顺序排序，那么相当于你任何操作都要flush/drain，这就变成Linearizability了。根据你的synchronization model不同，weak ordering可以实现不同级别的一致性。
 
 
-# 参考
+## 参考
 1. Richard J Lipton and Jonathan S Sandberg. "PRAM: A scalable shared memory" *Princeton University, Department of Computer Science, 1988.*
 2. Mustaque Ahamad, Gil Neiger, James E. Burns, Prince Kohli, Phillip W. Hutto. "Causal memory: definitions, implementation, and programming" *Distributed Computing, 9(1):37–49, 1995*
 3. Herlihy, Maurice P.; Wing, Jeannette M. (1987). "Axioms for Concurrent Objects". *Proceedings of the 14th ACM SIGACT-SIGPLAN Symposium on Principles of Programming Languages, POPL '87. p. 13*
@@ -117,7 +117,7 @@ Let a synchronization model be a set of constraints on memory accesses that spec
 
 
 
-# 系列文章目录
+## 系列文章目录
 
 1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
 2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)

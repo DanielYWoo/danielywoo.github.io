@@ -107,6 +107,8 @@ Sb: {a2l, a22, a23, all, a12, a13}.
 
 > Linearizability, by contrast, is intended for applications such as multiprocessor operating systems in which concurrency is of primary interest, and where programmers are willing to apply special-purpose synchronization protocols, and to reason explicitly about the effects of concurrency. 
 
+大多数数据库都支持Serializable的一致性，或者叫做隔离级别。比他更弱的一致性（隔离级别）还有大家熟悉的Repeatable Read， Read Committed， Read Uncommitted。这些大家太熟悉了，本文就不介绍了。
+
 ## External Consistency
 
 In 1981, David Gifford第一次定义了External Consistency. 他先定义了一个Causal依赖模型（为了更容易理解，我对原文稍微做了一点点调整）
@@ -140,9 +142,17 @@ In 1981, David Gifford第一次定义了External Consistency. 他先定义了一
 
 External Consistency在单节点系统上实现并不难，但是在高并发的分布式系统中实现则非常困难。Google的Spanner是最具代表性的实现了External Consistency的超大规模分布式系统。在James Corbett 和大神 Jeff Dean的论文[[4]](#参考)中描述了Spanner是如何通过TrueTime来实现的External Consistency级别的snapshot read，有兴趣的同学可以自己看一下。
 
+## 总结
+
+至此我们已经介绍了所有常见的一致性模型以及他们的起源和发展历史。我们用下面这个图来总结一下所有的常见一致性模型，左边是多对象事务操作的，右边是单对象操作的，从上往下的严格程度越来越松。下一篇文章中，我将会通过介绍CAP和FLP为这个系列文章收尾。
+
+<img src="../images/2021-03-23/all-models.png" max-height="500px">
 
 
-# 参考
+
+
+
+## 参考
 
 1. PAPADIMITRIOU, C. H. "The serializability of concurrent database updates". *J. ACM 26, 4 (Oct. 1979), 631-653.*
 2. MAURICE P. HERLIHY and JEANNETTE M. WING "Linearizability: A Correctness Condition for Concurrent Objects" *ACM Transactions on Programming Languages and Systems, Vol. 12, No. 3, July 1990, Pages 463-492.*
@@ -152,7 +162,7 @@ External Consistency在单节点系统上实现并不难，但是在高并发的
 
 
 
-# 系列文章目录
+## 系列文章目录
 
 1. [Lamport Clock, Linearizability and Sequential Consistency](/history-of-distributed-systems-1)
 2. [Two Generals Paradox, 2PC and 3PC, FLP and Paxos](/history-of-distributed-systems-2)

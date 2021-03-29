@@ -202,4 +202,5 @@ Paxos设计的时候把异步网络的不确定性考虑在内, 放松了livenes
 3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)
 4. [Eventual Consistency](/history-of-distributed-systems-4)
 5. [Serializability Consistency, External Consistency](/history-of-distributed-systems-5)
+6. [CAP, FLP](/history-of-distributed-systems-6)
 

@@ -124,4 +124,5 @@ Let a synchronization model be a set of constraints on memory accesses that spec
 3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)
 4. [Eventual Consistency](/history-of-distributed-systems-4)
 5. [Serializability Consistency, External Consistency](/history-of-distributed-systems-5)
+6. [CAP, FLP](/history-of-distributed-systems-6)
 

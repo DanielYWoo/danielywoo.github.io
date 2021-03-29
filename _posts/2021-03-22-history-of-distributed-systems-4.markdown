@@ -82,3 +82,4 @@ Eventual: 所有进程互相看到的写无序, 但最终一致。不对跨进�
 3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)
 4. [Eventual Consistency](/history-of-distributed-systems-4)
 5. [Serializability Consistency, External Consistency](/history-of-distributed-systems-5)
+6. [CAP, FLP](/history-of-distributed-systems-6)

@@ -169,6 +169,7 @@ External Consistency在单节点系统上实现并不难，但是在高并发的
 3. [PRAM, Causal Consistency, Weak Consistency](/history-of-distributed-systems-3)
 4. [Eventual Consistency](/history-of-distributed-systems-4)
 5. [Serializability Consistency, External Consistency](/history-of-distributed-systems-5)
+6. [CAP, FLP](/history-of-distributed-systems-6)
 
 
 

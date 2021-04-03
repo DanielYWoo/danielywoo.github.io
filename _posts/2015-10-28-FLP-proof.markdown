@@ -17,7 +17,7 @@ Consensus定义:
 
 首先, 排除Byzantine式故障, 只考虑crash recovery故障模型. 消息系统是异步的, 但是任何消息都会被接收一次且仅一次, 并且无法伪造或者丢失。这是比一般的异步网络更加可靠的一个网络模型. 这样收窄的一个模型如果在只有一个faulty进程的情况下都不能有一个完全正确的consensus protocol, 那么在更一般的异步网络或者包含Byzantine故障的模型里，更不可能在有一个faulty进程的情况下有完全正确的protocol. 这里完全正确(totally correct)是指同时满足safety和liveness. 在实际应用中, Paxos, Raft, PBFT都是保证safety但是不保证liveness的, 所以他们都不是完全正确的算法, 理论上存在进入无限循环的可能性(实际上概率非常低, 在工程中完全可以使用). 在当时可以说这是一个非常令人震惊的结论了, 给我们日常工程中很多问题判了死刑，比如分布式系统的缓存一致性和可用性，比如分布式事务的一致性和可用性等等.
 
-关于本文中提到的异步网络和故障模型, 如果不清楚的请参考<a href="https://danielw.cn/network-failure-models">https://danielw.cn/network-failure-models</a>.
+关于本文中提到的异步网络和故障模型, 如果不清楚的请参考[异步网络的故障模型](/network-failure-models).
 
 下面开始介绍论文中的模型， 这个模型是一个通用的Consensus protocol, 定义为: 异步网络中的N个进程(N不小于2), 每个进程都有一个输入xp和输出yp的寄存器, 每个p的输入xp取值为{0, 1}其中一个, 这叫做一个进程的初始状态. 每个进程的表决结果输出到寄存器yp里, yp的取值范围为{b, 0, 1}, 其中yp的初始状态必须为b, 一旦产生表决结果则变成0或者1, 这时候这个进程的状态叫做decision state, yp不可以再变化. 每次内部状态的变化过程叫做transistion function, 他是deterministic的. 
 
@@ -145,4 +145,9 @@ Let C be a bivalent configuration of P, and let e=(p, m) be an event that is app
 
 我们设计一个队列, 把所有进程放到这个队列中, 按照FIFO的顺序每次一个进程出来, 这个进程从message buffer取出第一个此进程的消息, 把计算后发给其他进程的消息放回message buffer尾部, 然后进程自己回到队列尾部等待下一轮调度. 这个模型保证了每个进程总是有机会获得发送给他的消息. 根据Lemma 2我们知道一定会存在一个bivalent的configuration C0, 从C0开始执行到某一个bivalent的C, 这时候message buffer中第一个C的消息是e. 再根据Lemma 3我们知道如果把e挪到message buffer后面延迟这个消息的送达, 那么C一定会再产生一个bivalent configuration C'进入Ɗ. 这意味着通过延迟e, 可以让一个bivalent configuration再产生一个bivalent configuraiton, 因为可能会永远无法达到一个univalent configuration, 也就永远无法产生结果.
 
-这是一个非常精妙的证明.
+这是一个非常精妙的证明。
+
+## 参考
+
+1. Michael J. Fischer, Nancy A. Lynch, Michael S. Paterson. "Impossibility of distributed consensus with one faulty process" ****Journal of the ACMApril 1985 https://doi.org/10.1145/3149.214121*
+

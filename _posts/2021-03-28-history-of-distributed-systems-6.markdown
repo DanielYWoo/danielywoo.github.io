@@ -98,7 +98,7 @@ CAP其实是告诉我们在一个不可靠的分布式系统中safety和liveness
 
 CAP是针对分布式存储(最早)或者web service(Lynch证明)的特定工程场景，FLP的concensus问题则要宽泛的多，并且他的模型有非常严谨明确的的原子寄存器和transition function，没有模糊或者歧义。CAP的failure是指网络分区，而FLP的failure是指单个node crash，有时候在异步网络里我们是无法分辨二者区别的, 但是二者显然是不同的。
 
-我个人认为, FLP有着非常严谨的模型和理论支撑, 它通过一个更宽泛的模型(consensus, register and transition function)和更窄的触发条件(连Crash stop failure, one faulty process都能触发，更不用说crash recover failure或者byzatine了，更不用说多个faulty process了)更加强有力的揭示了liveness和safety的关系, 而且它早在1985年就发表了, 但是它却并没有像CAP那样引起工程界的重视. 我想大概是因为工程总是滞后于理论科学, 当时分布式系统还处于中世纪黑暗时期, 而2000年后NoSQL萌芽的时候, 一个更加容易被工程师理解(误解)的CAP横空出世, 被工程界广为人知. 尽管CAP当时提出的时候确实缺乏规范化的模型和理论支持, 并且所表达的场景太模糊, 但是它确实对工程领域产生了很大的影响和贡献. 即使他并没有跳出更早的FLP所展现出来的liveness和safety的本质矛盾. 
+我个人认为, FLP有着非常严谨的模型和理论支撑, 它通过一个更宽泛的模型(consensus, register and transition function)和更窄的触发条件(连Crash stop failure, one faulty process都能触发，更不用说crash recover failure或者Byzantine了，更不用说多个faulty process了)更加强有力的揭示了liveness和safety的关系, 而且它早在1985年就发表了, 但是它却并没有像CAP那样引起工程界的重视. 我想大概是因为工程总是滞后于理论科学, 当时分布式系统还处于中世纪黑暗时期, 而2000年后NoSQL萌芽的时候, 一个更加容易被工程师理解(误解)的CAP横空出世, 被工程界广为人知. 尽管CAP当时提出的时候确实缺乏规范化的模型和理论支持, 并且所表达的场景太模糊, 但是它确实对工程领域产生了很大的影响和贡献. 即使他并没有跳出更早的FLP所展现出来的liveness和safety的本质矛盾. 
 
 
 ## 参考

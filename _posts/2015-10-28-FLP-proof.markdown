@@ -101,6 +101,8 @@ C1=A建议1给B/C. B/C自己都倾向于1. (C1={1,1,1}并且它是1-valent)
 
 > P has a bivalent initial configuration when there is a faulty process.
 
+这个Lemma说明了如果有一个faulty process，那么开始的时候就有不确定性了。接下来我们还要证明起始不确定，发展也会不确定。
+
 ## Lemma 3
 
 >Let C be a bivalent configuration of P, and let e=(p, m) be an event that is applicable to C. Let ε be the set of configurations reachable from C without applying e, and let Ɗ = e(ε) = {e(E) when E ∈ ε and e is applicable to E}. Then, Ɗ contains a bivalent configuration.
@@ -108,13 +110,13 @@ C1=A建议1给B/C. B/C自己都倾向于1. (C1={1,1,1}并且它是1-valent)
 这是整个证明的核心部分, 这部分比较难理解.
 首先C不是initial configuration了, C可能是某个中间过程的configuration, 然后C是bivalent的. 假设e=(p, m)这个消息是可以应用于C的, 那么不用e所能达到的所有configuration应该是一幅图. 这个图就是ε. ε内任何一个configuration再用e就跳出ε, 并得到了一个集合Ɗ. 每一个'ε边界'上的configuration就是E, 因而有Ɗ=e(E).
 
-如果把e用于ε中某一个configuration, 那么相当于ε中离起始的C越远的configuration收到e越晚. 由于我们定义了ε不含e, 所以e只会发生在ε的边界上, 实际上就是把e看作离开ε进入Ɗ的最后一个消息. e会把ε内每一个configuration映射到Ɗ 中一个configuration.
+如果把e用于ε中某一个configuration, 那么相当于ε中离起始的C越远的configuration收到e越晚. 由于我们定义了ε中所有configuration都还未接受e, 所以e只会发生在ε到Ɗ的边界上, 实际上就是把e看作离开ε进入Ɗ的最后一个消息. e会把ε内每一个configuration映射到Ɗ中一个configuration.
 
-我们要证明Ɗ包含bivalent configuration, 我们反证它. 
+我们要证明Ɗ包含bivalent configuration。如果能证明，说明一个bivalent configuration C in ε可以通过e到另外一个bivalent configuration D in Ɗ, 然后D作为一个bivalent configuration可以通过另外一个e'，属于另外一个ε', 发展到另外一个Ɗ', 如果我们构造一个巧合的消息处理顺序，不断接受e和e'，我们就可以周而复始保持bivalent状态。 
 
 ### Lemma 3 第一步 Ɗ同时包含0-valent和1-valent
 
-假设Ɗ没有bivalent configuration, 那么Ɗ只能包含0-valent 或者 1-valent. 也就是说e会把ε中每一个configuration变为(映射为)Ɗ 中的一个0-valent或者1-valent configuration. 按照这个思路, 因为C是bivalent, 所以C可以到达0-valent和1-valent，假设他们是E<sub>i</sub>, i = {0, 1}. 接下来分两种情况分析:(此处不要把E<sub>i</sub>和lemma 3中的E混淆，二者含义不同, E<sub>i</sub>此处不一定属于ε)
+我们反证它. 假设Ɗ没有bivalent configuration, 那么Ɗ只能包含0-valent 或者 1-valent. 也就是说e会把ε中每一个configuration变为(映射为)Ɗ 中的一个0-valent或者1-valent configuration. 按照这个思路, 因为C是bivalent, 所以C可以到达0-valent和1-valent，假设他们是E<sub>i</sub>, i = {0, 1}. 接下来分两种情况分析:(此处不要把E<sub>i</sub>和lemma 3中的E混淆，二者含义不同, E<sub>i</sub>此处不一定属于ε)
 
 1. 如果E<sub>i</sub>属于ε, 说明E<sub>i</sub>还没有收到e, 那么E<sub>i</sub>收到e之后变为F<sub>i</sub>=e(E<sub>i</sub>), F<sub>i</sub>显然属于刚才我们定义的Ɗ。
 2. 如果E<sub>i</sub>不属于ε, 说明E<sub>i</sub>已经收到了e，那么必然存在F<sub>i</sub> ∈ Ɗ, 使C收到e后到达F<sub>i</sub>，然后再到达E<sub>i</sub>。
@@ -164,9 +166,17 @@ C1=A建议1给B/C. B/C自己都倾向于1. (C1={1,1,1}并且它是1-valent)
 
 根据Lemma 2, 如果有一个faulty process那么P一定含有bivalent initial configuration, 那么任何从这个bivalent状态进入univalent的deciding run, 其中必然存在一个从bivalent到univalent的关键步骤, 这个步骤决定了最终结果. 我们接下来就是要证明系统中总是有可能会把这个步骤无限推迟下去.
 
-我们设计一个队列, 把所有进程放到这个队列中, 按照FIFO的顺序每次一个进程出来, 这个进程从message buffer取出第一个此进程的消息, 把计算后发给其他进程的消息放回message buffer尾部, 然后进程自己回到队列尾部等待下一轮调度. 这个模型保证了每个进程总是有机会获得发送给他的消息. 根据Lemma 2我们知道一定会存在一个bivalent的configuration C<sub>0</sub>, 从C<sub>0</sub>开始执行到某一个bivalent的C(C属于边界集合ε), 这时候message buffer中待处理的C的消息是e. 再根据Lemma 3我们知道那么C一定会再产生一个bivalent configuration C'(属于Ɗ). 这意味着通过延迟e, 可以让一个bivalent configuration再产生一个bivalent configuraiton, 因为可能会永远无法达到一个univalent configuration, 也就永远无法产生结果.
+我们设计一个队列, 把所有进程放到这个队列中, 按照FIFO的顺序每次一个进程出来, 这个进程从message buffer取出第一个此进程的消息, 把计算后发给其他进程的消息放回message buffer尾部, 然后进程自己回到队列尾部等待下一轮调度. 这个模型保证了每个进程总是有机会获得发送给他的消息. 根据Lemma 2我们知道一定会存在一个bivalent的configuration C<sub>0</sub>, 从C<sub>0</sub>开始执行到某一个bivalent的C(C属于边界集合ε), 这时候message buffer中待处理的C的消息是e. 再根据Lemma 3我们知道那么C一定会通过e再产生一个bivalent configuration C'(属于Ɗ). 而C'是bivalent的，那么C' 同理就可能通过某个e'进入C，算法会再次产生e和e'进入message buffer。这意味着可以通过控制消息顺序，让一个bivalent configuration再产生一个bivalent configuraiton, 因为可能会永远无法达到一个univalent configuration, 也就永远无法产生结果.
 
-这是一个非常精妙的证明。
+看到这里有些人会问，证明你都讲完了，我怎么还没看出来，异步网络体现在哪里了？一个故障节点体现在哪里了？
+
+总结一下：
+1. <b>asynchronous network</b>体现在模型的message buffer的non-deterministic。message buffer消息顺序不确定性体现在某一轮某个进程p从buffer取出来null，这就是说消息有不确定的延迟，别的进程p'因而先从message buffer拿到了消息，因而下一轮产生不同的configuration，展开了一个巨大的连通图(所有的run)。
+2. <b>one faulty process</b>是体现在Lemma 2的假设里的, 基于有一个faulty process因此才有了至少有一个initial configuration是bivalent的结论. 否则没有一个faulty process的话Lemma 2是不成立的。
+3. Lemma 2表达了<b>初始的不确定性</b>，Lemma 3表达了从不确定的configuration运行过程可以<b>保持不确定性</b>。 所谓的total correct就是同时满足agreement, validity, termination。FLP证明了在异步网络有一个故障节点的时候termination是无法满足的, 这时候只满足两个条件，所以是partial correct。
+4. 我们常见的Paxos/Raft都是partial correct。只是实际工程中我们通过增加随机性来降低无法termination的可能性，因而让这些算法尽量接近total correct，但是理论上是永远无法达到的。
+
+这是一个非常精妙的证明。证明过程不繁琐，但是我觉得，Nancy Lynch这些人能作为pathfinder想到这个思路真的非常了不起。
 
 ## 参考
 

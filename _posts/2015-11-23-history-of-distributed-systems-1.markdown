@@ -72,7 +72,7 @@ Lamport在他的论文中举了一个例子, 下面的图中P/Q/R是三个进程
 
 图片来源: Time, Clocks, and the Ordering of Events in a Distributed System
 
-横向虚线就变成了全局的clock tick, 而每个进程的clock都是一致的. Lamport Clock的作用就是找到潜在的causally related关系, 之后1988年出现的Vector Clock[[2]](#参考)是一个具体实现的算法. 关于Vector Clock, Riak的工程师有两篇非常好的文章大家可以去看看Why Vector Clocks Are Easy 和 Why Vector Clocks Are Hard). 这里受制于篇幅此处不再详细描述, 在后继介绍Causal Consistency的时候会给大家详细介绍. 对于1978年这篇论文有兴趣的同学可以去检索 Time, Clock, and Ordering of Events  in a Distributed System. 这篇论文被认为是分布式系统的一致性问题的开山之作, 其中 max(Ci, Cj) + 1这个单调递增的timestamp后来影响了很多的设计, 比如Vector Clock, 比如一些Conflict-free Replicated Data Types, Paxos和Raft等. 这篇论文也是Leslie Lamport被引用最多的文章(截至2019年10月, 共计11574次), 按照Lamport自己的说法, 这篇论文影响了后人对于分布式系统的一致性问题的思考方式, 而后基于人们对一致性, 性能, 实现难度之间的平衡, 产生了很多不同的一致性模型.
+横向虚线就变成了全局的clock tick, 而每个进程的clock都是一致的. Lamport Clock的作用就是找到潜在的causally related关系, 之后1988年出现的Vector Clock[[2]](#参考)是一个具体实现的算法. 关于Vector Clock, Riak的工程师有两篇非常好的文章大家可以去看看Why Vector Clocks Are Easy 和 Why Vector Clocks Are Hard). 这里受制于篇幅此处不再详细描述, 在后继介绍Causal Consistency的时候会给大家详细介绍. 对于1978年这篇论文有兴趣的同学可以去检索 Time, Clock, and Ordering of Events  in a Distributed System. 这篇论文被认为是分布式系统的一致性问题的开山之作, 其中 max(Ci, Cj) + 1这个单调递增的timestamp后来影响了很多的设计, 比如Vector Clock, 比如一些Conflict-free Replicated Data Types, Paxos和Raft等. 这篇论文也是Leslie Lamport被引用最多的文章(截至2021年3月, 共计12511次), 按照Lamport自己的说法, 这篇论文影响了后人对于分布式系统的一致性问题的思考方式, 而后基于人们对一致性, 性能, 实现难度之间的平衡, 产生了很多不同的一致性模型.
 
 ## 理想的一致性模型
 

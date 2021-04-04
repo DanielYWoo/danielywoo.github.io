@@ -7,7 +7,7 @@ published: true
 
 作为分布式系统历史中最重要的一个定理之一, FLP是每个做分布式系统的开发人员都应该深刻理解的一个基础. 但是FLP的证明过程不是特别容易, 原文中作者撰文非常简练精确, 本文通过一些例子和不太严格但是容易理解的语言来帮助读者理解FLP的证明过程.
 
-# Model
+## Model
 
 Consensus定义:
 
@@ -26,7 +26,7 @@ Consensus定义:
 这个P模型中的进程之间通过消息通信, 一个消息e = (p, m). 其中p是目标进程, m是消息值. 整个消息系统叫做message buffer, 相当于一个multiset(每个进程拥有自己的FIFO消息队列, 如同erlang信箱一样). message buffer里包含着已经发出但是还没有收到的消息. message buffer支持两个操作:
 
 1. send(p, m): 把一个消息(p, m)放到message buffer中.
-2. receive(p): p从message buffer删除并取得消息值m, 或者返回null. 前者表示消息被接收到, 如果message buffer为空后者表示没有p的消息, 如果message buffer不为空表示p的消息传输被延迟. 注意, p的消息被延迟的次数有上限, 任何消息最终都会被收到.
+2. receive(p): p从message buffer删除并取得消息值m, 或者返回null. 前者表示消息被接收到, 如果message buffer为空后者表示没有p的消息, 如果message buffer为空表示无消息，或者p的消息传输被延迟（message buffer内的消息不变化）. 注意, p的消息被延迟的次数有上限, 任何消息最终都会被收到.
 
 一个configuration(状态)就是指所有进程的内部状态和message buffer状态. 整个系统总是从一个configuration变化为另外一个configuration. 这个变化过程叫做step, 一个step取决于message buffer返回消息的情况, 因为receive(p)返回的是M还是null, 而transition function是deterministic的, 所以下一个configuration取决于message buffer的返回值. 这个消息被接受处理的过程叫做event(p, m), 消息被延迟的事件叫做event(p, null). 这些steps叫做一个run, 如果结果的configuration有任何一个进程的yp={0,1}那么着叫做一个deciding run, 这个configuration已经有了表决结果. 因为只要有一个进程能够进入decision state，那么整个configuration就算是0-valent或者1-valent了.
 
@@ -36,7 +36,7 @@ Consensus定义:
 
 因为P是deterministic的，所以给定一个schedule能得出确定的结果。那么我们定义，如果一个configuration不需要依赖之后发生的事件，在当前的时间就能确定自身的状态，则称为n-valent。这个模型中有三种结果，yp = {0, 1, b}, 如果一个configuration如果无论后继的事件如何都会进入选择0的状态, 这叫做0-valent；如果总是会进入选择1的状态, 这个configuration叫做1-valent；如果当前还不能确定结果，还需要后继的事件才能确定结果是0还是1，那么这个configuration叫做bi-valent.
 
-另外，对于论文中的模型，我们对本文开头的Consensus第二个条件弱化为只要有一个进程进入decision state即可。因为模型里保证所有non-faulty进程中只要有一个进入了decision state，其他non-faulty进程最终一定也会得出同样的决定。(这是为了简化模型)
+另外，对于论文中的模型，我们对本文开头的Consensus第二个条件弱化为只要有一个进程进入decision state即可。(这是为了简化模型)
 
 至于论文中定义non-faulty进程为：
 
@@ -48,8 +48,8 @@ Consensus定义:
 
 对于一个P partially correct的定义为满足两个条件
 
-1. No accessibleconfiguration has more than one decision value.
-2. For each v E (0, I), some accessible configuration has decision value v.
+1. No accessible configuration has more than one decision value.
+2. For each v∈(0, I), some accessible configuration has decision value v.
 
 对于一个P totally correct的定义为满足两个条件
 1. 他是partitially correct的。(agreement and valid)
@@ -57,7 +57,7 @@ Consensus定义:
 
 我们现在有了一个模型，然后论文开展了三个Lemma最后拼成结论。
 
-# Lemma 1
+## Lemma 1
 > Suppose that from some configuration C, the schedulers 𝞂1, 𝞂2 lead to configurations C1, C2, respectively. If the sets of processes taking steps in 𝞂1 and 𝞂2, respectively, are disjoint, then 𝞂2 can be applied to C1 and 𝞂1 can be applied to C2, and both lead to the same configuration C3.
 
 这条引理表示如果一个C里有两组事件, 每个事件(p, m)分别是在两组没有交互的进程上, 那么先使用任何一组事件再使用另外一组事件在C上, 结果都一样. 下图描述了这样的情况.
@@ -69,28 +69,31 @@ Consensus定义:
 
 <img src="/images/2015-10-28/lemma1_paxos.png" max-height="500px">
 
-# Lemma 2
+## Lemma 2
 > P has a bivalent initial configuration
 
 任何一个协议P一定会有bivalent初始configuration. 这是由于异步网络的本质造成的. 因为异步网络的消息顺序不一定, 所以对同一个初始configuration都可能会运行产生不同的结果. 证明如下:
 
 反证法, 假设协议P没有bivalent initial configuration, 那么P的initial configuration不是0-valent就是1-valent. 我们把所有只差一个进程的p上的xp变量不同的两个initial configuration叫做相邻(adjacent). 
 
-由本文开头提到的Consensus的第三点validity要求, 全部xp都是0的configuration结果也应该是0，同样全部xp都是1的configuration结果也应该是1，所以如果P没有bivalent initial configuration那么一定是同时包含了0-valent 和 1-valent的initial configuration。 因为同时存在0-valent和1-valent的initial configurations, 假设他们是C和C', 那么从C到C'一定有一个路径上, 至少存在一处相邻的C0和C1, 使得C0是0-valent, C1是1-valent. 下图是一个只有三个进程(p0, p1, p2)的所有initial configuration的情况, 线条连接的是相邻的两个initial configuration. (注意，这里的路径不是指变化路径，他只是表示initial configuration的相似性)
+由本文开头提到的Consensus的第三点validity要求, {0,0,0}一定是0-valent的，而{0,0,1}和{0,1,1}可能是0-valent的，也可能是1-valent的。也就是说一个initial configuration中的xp只要包含了0，那么就有可能是0-valent的，如果xp包含了1，那么就有可能是1-valent的。但是如果全部xp都是0的configuration一定是0-valent的，同样全部xp都是1的configuration也一定是1-valent的，所以如果P没有bivalent initial configuration那么一定是同时包含了0-valent 和 1-valent的initial configuration(因为initial configuraiton至少包含了{0,0,0}和{1,1,1})。 
+
+进一步思考, 并使用前面提出的adjacent的概念，因为同时存在0-valent和1-valent的initial configurations, 假设他们是C和C', 那么从C到C'一定有一个路径上, 至少存在一处adjacent的C0和C1, 使得C0是0-valent, C1是1-valent. 下图是一个只有三个进程(p0, p1, p2)的所有initial configuration(xp1, xp2, xp3)的情况, 线条连接的是相邻的两个initial configuration. (注意，这里的路径不是指变化路径，他只是表示initial configuration的相似性)
+
 
 <img src="/images/2015-10-28/lemma2_adjacent.png" max-height="500px">
 
-为什么说“一定存在相邻的C0和C1“呢？看这个图，明显{0,0,0}肯定是0-valent, {1,1,1}肯定是1-valent，那么我们把他们当作C和C', 显然这是个联通图，所以他们俩是reachable的，那么他们之间的某个路径上一定存在从0-valent变化到1-valent的地方。这个例子中在{0,0,0} - {0,1,0} - {1,1,0} - {1,1,1}这条路径上, {0,1,0}和{1,1,0}很有可能就是C0和C1的分界点(假设{0,1,0}是0-valent，{1,1,0}是1-valent), 也可能在其他路径上，比如如果{0,1,0}是1-valent，那么分界点就在{0,0,0}和{0,1,0}了。无论如何一定存在一对相邻的initial configuration分别是0-valent和1-valent。
+为什么说“一定存在相邻的C0和C1“呢？看这个图，明显{0,0,0}肯定是0-valent, {1,1,1}肯定是1-valent，那么我们把他们当作C和C', 显然这是个连通图，所以他们俩是reachable的，那么他们之间的某个路径上一定存在从0-valent变化到1-valent的地方。这个例子中在{0,0,0} - {0,1,0} - {1,1,0} - {1,1,1}这条路径上, {0,1,0}和{1,1,0}很有可能就是C0和C1的分界点(假设{0,1,0}是0-valent，{1,1,0}是1-valent), 也可能在其他路径上，比如如果{0,1,0}是1-valent，那么分界点就在{0,0,0}和{0,1,0}了。无论如何一定存在一对相邻的initial configuration分别是0-valent和1-valent。
 
-假设p是C0和C1这两个initial configuration之间初始状态不同的那个进程, 如果p是faulty的（原文takes no steps）, p不再从buffer里获得任何消息, 那么C0和C1如果排除了p之后其实状态是一样的, 那么排除了p之后C0上的某个事件序列𝞂也可以应用在C1上, 而且结果相同. 因为C0是0-valent的, C1是1-valent的, 他们的结果应该分别是0和1, 这和他们排除p之后结果相同的推论矛盾.
+假设p是C0和C1这两个initial configuration之间初始状态不同的那个进程, 如果p是faulty的（原文takes no steps）, p不再从buffer里获得任何消息也不发送消息, 那么C0和C1如果排除了p之后其实状态是一样的, 那么排除了p之后C0上的某个事件序列𝞂也可以应用在C1上, 而且结果相同. 假设结果是1，因为C0是0-valent的, C0不应该得到1，这就矛盾了。同样，如果结果是1，C1是1-valent的, 也矛盾了。
 
-这个引理的本质是:一个故障节点停止接受消息, 会使结果不确定偏离原本的预定结果（原本C0/C1分别确定0和1，引入一个faulty process之后结果相同，要么都是0要么都是1）. 举个例子, 我们设计一个consensus算法, 规则如下: 有A/B/C三个节点, A作为leader对B/C做类似于两阶段提交的询问, A先告诉B/C期望的结果, B/C接受并返回应答, 只有收到应答之后A才能做出决定并发出第二个请求给B/C做提交, 如果A发生了故障, 那么B作为leader对C询问. 那么我们设计一个0-valent的C0和一个1-valent的C1分别如下:
+这个引理的本质是:一个故障节点停止接受消息, 会使结果不确定偏离原本的预定结果（原本C0/C1分别确定0和1，引入一个faulty process之后结果相同，要么都是0要么都是1）. 举个例子, 我们设计一个consensus算法, 规则如下: 有A/B/C三个节点, A作为leader对B/C做类似于两阶段提交的询问, A先告诉B/C期望的结果, B/C接受并返回应答, 只有收到应答之后A才能做出决定并发出第二个请求给B/C做提交, 如果A发生了故障, 那么B作为leader对C询问. 我们要求这个算法允许一个faulty节点但是不影响结果正确性。那么我们设计一个0-valent的C0和一个1-valent的C1分别如下:
 
-C0=A建议0给B/C. B/C自己都倾向于1.
+C0=A建议0给B/C. B/C自己都倾向于1. (C0={0,1,1}并且它是0-valent)
 
-C1=A建议1给B/C. B/C自己都倾向于1.
+C1=A建议1给B/C. B/C自己都倾向于1. (C1={1,1,1}并且它是1-valent)
 
-明显, 如果没有任何故障, C0结果是0, C1结果是1. 因为C0和C1只差一个进程A不同, 假设A进程挂了, 那么C0'和C1'其实是一样的, 这时候他们俩结果应该是一致的, 应该都是1. 但是这和C0就算有一个故障节点也应该结果为0矛盾.
+明显, 如果没有任何故障, C0结果是0, C1结果是1. 因为C0和C1只差一个进程A不同, 假设A进程挂了, 那么C0'和C1'其实是一样的, 这时候他们俩结果应该是一致的, 应该都是1. 但是这和C0就算有一个faulty节点也应该结果为0矛盾, 所以在<b>一个faulty process存在的情况下</b>不可能所有的initial configuration都是确定0-valent或者1-valent的，一定存在不确定的initial configuration.
 
 <img src="/images/2015-10-28/lemma2_sample.png" max-height="500px">
 
@@ -98,52 +101,70 @@ C1=A建议1给B/C. B/C自己都倾向于1.
 
 > P has a bivalent initial configuration when there is a faulty process.
 
-# Lemma 3
+## Lemma 3
 
-Let C be a bivalent configuration of P, and let e=(p, m) be an event that is applicable to C. Let ε be the set of configurations reachable from C without applying e, and let Ɗ = e(ε) = {e(E) when E ∈ ε and e is applicable to E}. Then, Ɗ contains a bivalent configuration.
+>Let C be a bivalent configuration of P, and let e=(p, m) be an event that is applicable to C. Let ε be the set of configurations reachable from C without applying e, and let Ɗ = e(ε) = {e(E) when E ∈ ε and e is applicable to E}. Then, Ɗ contains a bivalent configuration.
 
 这是整个证明的核心部分, 这部分比较难理解.
 首先C不是initial configuration了, C可能是某个中间过程的configuration, 然后C是bivalent的. 假设e=(p, m)这个消息是可以应用于C的, 那么不用e所能达到的所有configuration应该是一幅图. 这个图就是ε. ε内任何一个configuration再用e就跳出ε, 并得到了一个集合Ɗ. 每一个'ε边界'上的configuration就是E, 因而有Ɗ=e(E).
 
 如果把e用于ε中某一个configuration, 那么相当于ε中离起始的C越远的configuration收到e越晚. 由于我们定义了ε不含e, 所以e只会发生在ε的边界上, 实际上就是把e看作离开ε进入Ɗ的最后一个消息. e会把ε内每一个configuration映射到Ɗ 中一个configuration.
 
-我们要证明Ɗ包含bivalent configuration, 我们反证它. 假设Ɗ没有bivalent configuration, 那么Ɗ只能包含0-valent和1-valent. 也就是说e会把ε中每一个configuration变为(映射为)Ɗ 中的一个0-valent或者1-valent configuration. 按照这个思路, 因为C是bivalent, 所以C可以到达0-valent和1-valent，假设他们是Ei, i = {0, 1}. 接下来分两种情况分析:(此处不要把Ei和lemma 3中的E混淆，二者含义不同, Ei此处不一定属于ε)
+我们要证明Ɗ包含bivalent configuration, 我们反证它. 
 
-1. 如果Ei属于ε, 说明Ei还没有收到e, 那么Ei收到e之后变为Fi=e(Ei), Fi显然属于刚才我们定义的Ɗ。
-2. 如果Ei不属于ε, 说明Ei已经收到了e，那么必然存在Fi ∈ Ɗ, 使C收到e后到达Fi，然后再到达Ei。
+### Lemma 3 第一步 Ɗ同时包含0-valent和1-valent
 
-以上两种情况Fi都是在Ɗ里的，所以Fi一定不是bi-valent的，一定是i-valent的。而且Ei和Fi要么Ei可达Fi，要么Fi可达Ei。
+假设Ɗ没有bivalent configuration, 那么Ɗ只能包含0-valent 或者 1-valent. 也就是说e会把ε中每一个configuration变为(映射为)Ɗ 中的一个0-valent或者1-valent configuration. 按照这个思路, 因为C是bivalent, 所以C可以到达0-valent和1-valent，假设他们是E<sub>i</sub>, i = {0, 1}. 接下来分两种情况分析:(此处不要把E<sub>i</sub>和lemma 3中的E混淆，二者含义不同, E<sub>i</sub>此处不一定属于ε)
 
-因为C是bivalent, 所以一定同时存在E0/E1, 那也就同时存在F0/F1. 所以由反证假设可以得出结论: Ɗ总是同时包含0-valent和1-valent.
+1. 如果E<sub>i</sub>属于ε, 说明E<sub>i</sub>还没有收到e, 那么E<sub>i</sub>收到e之后变为F<sub>i</sub>=e(E<sub>i</sub>), F<sub>i</sub>显然属于刚才我们定义的Ɗ。
+2. 如果E<sub>i</sub>不属于ε, 说明E<sub>i</sub>已经收到了e，那么必然存在F<sub>i</sub> ∈ Ɗ, 使C收到e后到达F<sub>i</sub>，然后再到达E<sub>i</sub>。
+
+以上两种情况F<sub>i</sub>都是在Ɗ里的，所以F<sub>i</sub>一定不是bi-valent的，一定是i-valent的。而且E<sub>i</sub>和F<sub>i</sub>要么E<sub>i</sub>可达F<sub>i</sub>，要么F<sub>i</sub>可达E<sub>i</sub>。
+
+因为C是bivalent, 所以同时存在E<sub>0</sub>/E<sub>1</sub>, 那也就同时存在F<sub>0</sub>/F<sub>1</sub>. 所以Ɗ总是同时包含0-valent和1-valent.
+
+作者并没有提到如果E<sub>i</sub>在ε之外但是属于Ɗ的情况，我想是因为太简单了，明显也会导致Ɗ同时包含0-valent或者1-valent，所以没提及.
 
 <img src="/images/2015-10-28/lemma3_sample.png" max-height="500px">
 
-那么我们按照这个假设, 我们从ε中找两个configuration, C0和C1, 使得C0通过一条消息e'= (p', m')得到C1(此处C0和C1不表示他们是0-valent和1-valent, 0/1下标只是为了容易区分). 那么e能够把C0变成D0状态, e也可以把C1变成D1状态, 其中D0/D1是属于Ɗ 的0-valent和1-valent. 如下图所示:
+### Lemma 3 第二步建立neighbour configurations
+
+那么我们按照这个假设, 我们从ε中找两个neighbour configurations, C<sub>0</sub>和C<sub>1</sub>, 使得C<sub>0</sub>通过一条消息e'= (p', m')得到C<sub>1</sub>(此处C<sub>0</sub>和C<sub>1</sub>不表示他们是0-valent和1-valent, 0/1下标只是为了容易区分). 那么e能够把C<sub>0</sub>变成D<sub>0</sub>状态, e也可以把C<sub>1</sub>变成D1状态, 和刚才C下标含义不同，这里D<sub>0</sub>/D<sub>1</sub>是<b>属于Ɗ</b> 的0-valent和1-valent. 如下图所示:
 
 <img src="/images/2015-10-28/lemma3_sample_2a.png" max-height="500px">
 
-接下来我们又要分两种情况讨论. 第一种比较简单, 如果e'和e所接受消息的p'和p不同, 那么从C0开始, e'和e所作用的进程是离散不相交的, 根据lemma 1, C0上用了e再用e'和先用e'再用e的结果应该是一样的. 根据lemma 1, 我们把这个图稍微旋转一下, 会看到这样一幅图.
+接下来我们又要分两种情况讨论.
+
+#### Lemma 3 第二步 情况1
+
+第一种比较简单, 如果e'和e所接受消息的p'和p不同, 那么从C<sub>0</sub>开始, e'和e所作用的进程是离散不相交的, 根据lemma 1, C<sub>0</sub>上用了e再用e'和先用e'再用e的结果应该是一样的. 根据lemma 1, 我们把这个图稍微旋转一下, 会看到这样一幅图. 其中D<sub>0</sub>和D<sub>1</sub>可以是属于Ɗ的, 分别是0-valent或1-valent.
 
 <img src="/images/2015-10-28/lemma3_sample_2b.png" max-height="500px">
 
-红色是根据lemma 1加上去的, 但是这条红色的会把一个0-valent的D0变成1-valent的D1, 这是明显矛盾不可能的. 所以第一种情况不存在.
+红色是根据lemma 1加上去的, 但是这条红色的会把一个0-valent的D<sub>0</sub>变成1-valent的D<sub>1</sub>, 这是明显矛盾不可能的. 所以第一种情况不存在.
 
-再看第二种情况, 假设p'和p相同, 那么e和e‘都是p上的消息. 这种情况更复杂一点. 假设p is faulty, 任何一个从C0开始不含p的消息（e和e')的有限步数的deciding run会得到一个0-valent或者1-valent的configuration A, 我们把这个deciding run的事件序列标记为𝞂. 因为𝞂不含p的事件, 所以它和e作用的进程不相交, 那么用lemma 1可以得出下图中的E0. 同理, e'和e都作用于p, 所以e'和e的事件序列和𝞂作用的进程也不想交, 根据lemma 1可以得到E1.
+#### Lemma 3 第二步 情况2
+
+再看第二种情况, 假设p'和p相同, 那么e和e‘都是p上的消息. 这种情况更复杂一点. 假设p is faulty, 任何一个从C<sub>0</sub>开始不含p的消息（e和e')的有限步数的deciding run会得到一个0-valent或者1-valent的configuration A, 我们把这个deciding run的事件序列标记为𝞂. 因为𝞂不含p的事件, 所以它和e作用的进程不相交, 那么用lemma 1可以得出下图中的E<sub>0</sub>. 同理, e'和e都作用于p, 所以e'和e的事件序列和𝞂作用的进程也不想交, 根据lemma 1可以得到E<sub>1</sub>.
+
+因为E<sub>0</sub>和E<sub>1</sub>都经过了e，因而他们都属于E(经过Ɗ)的，因此他们可以分别是0-valent和1-valent的。
 
 <img src="/images/2015-10-28/lemma3_sample_2c.png" max-height="500px">
 
-那么我们可以看出A可以变成E0也可以变成E1, 这说明A是bivalent的. 但是这和A是一个deciding run的结果矛盾. (A要么0-valent要么1-valent).
+那么我们可以看出A可以变成E<sub>0</sub>也可以变成E<sub>1</sub>, 这说明A是bivalent的. 但是这和A是一个deciding run的结果矛盾. (A要么0-valent要么1-valent).
+
+#### Lemma 3 结论: Ɗ 一定包含bivalent configuration.
 
 至此p=p'和p!=p'的两种情况在我们的反证假设下都矛盾, 因此反证假设错误. Lemma 3 证明完成, 即: Ɗ 一定包含bivalent configuration.
 
 三个Lemma都证明结束后, 我们来推导最终FLP定理.
 
-# FLP Theorem
+## FLP Theorem
 > No Consensus protocol is totally correct in spite of one fault.
 
-根据Lemma 2, P一定含有bivalent initial configuration, 那么任何从这个bivalent状态进入univalent的deciding run, 其中必然存在一个从bivalent到univalent的关键步骤, 这个步骤决定了最终结果. 我们接下来就是要证明系统中总是有可能会把这个步骤无限推迟下去.
+根据Lemma 2, 如果有一个faulty process那么P一定含有bivalent initial configuration, 那么任何从这个bivalent状态进入univalent的deciding run, 其中必然存在一个从bivalent到univalent的关键步骤, 这个步骤决定了最终结果. 我们接下来就是要证明系统中总是有可能会把这个步骤无限推迟下去.
 
-我们设计一个队列, 把所有进程放到这个队列中, 按照FIFO的顺序每次一个进程出来, 这个进程从message buffer取出第一个此进程的消息, 把计算后发给其他进程的消息放回message buffer尾部, 然后进程自己回到队列尾部等待下一轮调度. 这个模型保证了每个进程总是有机会获得发送给他的消息. 根据Lemma 2我们知道一定会存在一个bivalent的configuration C0, 从C0开始执行到某一个bivalent的C, 这时候message buffer中第一个C的消息是e. 再根据Lemma 3我们知道如果把e挪到message buffer后面延迟这个消息的送达, 那么C一定会再产生一个bivalent configuration C'进入Ɗ. 这意味着通过延迟e, 可以让一个bivalent configuration再产生一个bivalent configuraiton, 因为可能会永远无法达到一个univalent configuration, 也就永远无法产生结果.
+我们设计一个队列, 把所有进程放到这个队列中, 按照FIFO的顺序每次一个进程出来, 这个进程从message buffer取出第一个此进程的消息, 把计算后发给其他进程的消息放回message buffer尾部, 然后进程自己回到队列尾部等待下一轮调度. 这个模型保证了每个进程总是有机会获得发送给他的消息. 根据Lemma 2我们知道一定会存在一个bivalent的configuration C<sub>0</sub>, 从C<sub>0</sub>开始执行到某一个bivalent的C(C属于边界集合ε), 这时候message buffer中待处理的C的消息是e. 再根据Lemma 3我们知道那么C一定会再产生一个bivalent configuration C'(属于Ɗ). 这意味着通过延迟e, 可以让一个bivalent configuration再产生一个bivalent configuraiton, 因为可能会永远无法达到一个univalent configuration, 也就永远无法产生结果.
 
 这是一个非常精妙的证明。
 

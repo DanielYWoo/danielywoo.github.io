@@ -162,7 +162,7 @@ C1=A建议1给B/C. B/C自己都倾向于1. (C1={1,1,1}并且它是1-valent)
 三个Lemma都证明结束后, 我们来推导最终FLP定理.
 
 ## FLP Theorem
-> No Consensus protocol is totally correct in spite of one fault.
+> No Consensus protocol is totally correct in spite of one fault. (in an asynchronous system)
 
 根据Lemma 2, 如果有一个faulty process那么P一定含有bivalent initial configuration, 那么任何从这个bivalent状态进入univalent的deciding run, 其中必然存在一个从bivalent到univalent的关键步骤, 这个步骤决定了最终结果. 我们接下来就是要证明系统中总是有可能会把这个步骤无限推迟下去.
 
@@ -174,11 +174,12 @@ C1=A建议1给B/C. B/C自己都倾向于1. (C1={1,1,1}并且它是1-valent)
 1. <b>asynchronous network</b>体现在模型的message buffer的non-deterministic。message buffer消息顺序不确定性体现在某一轮某个进程p从buffer取出来null，这就是说消息有不确定的延迟，别的进程p'因而先从message buffer拿到了消息，因而下一轮产生不同的configuration，展开了一个巨大的连通图(所有的run)。
 2. <b>one faulty process</b>是体现在Lemma 2的假设里的, 基于有一个faulty process因此才有了至少有一个initial configuration是bivalent的结论. 否则没有一个faulty process的话Lemma 2是不成立的。
 3. Lemma 2表达了<b>初始的不确定性</b>，Lemma 3表达了从不确定的configuration运行过程可以<b>保持不确定性</b>。 所谓的total correct就是同时满足agreement, validity, termination。FLP证明了在异步网络有一个故障节点的时候termination是无法满足的, 这时候只满足两个条件，所以是partial correct。
-4. 我们常见的Paxos/Raft都是partial correct。只是实际工程中我们通过增加随机性来降低无法termination的可能性，因而让这些算法尽量接近total correct，但是理论上是永远无法达到的。
+4. 异步网络中safety (agreement + validity) 和 liveness (termination) 是不能同时满足的(total correct)。partial correct只满足safety。
+5. 我们常见的Paxos/Raft都是partial correct。只是实际工程中我们通过增加随机性来降低无法termination的可能性，因而让这些算法尽量接近total correct，但是理论上是永远无法达到的。
 
 这是一个非常精妙的证明。证明过程不繁琐，但是我觉得，Nancy Lynch这些人能作为pathfinder想到这个思路真的非常了不起。
 
 ## 参考
 
-1. Michael J. Fischer, Nancy A. Lynch, Michael S. Paterson. "Impossibility of distributed consensus with one faulty process" ****Journal of the ACMApril 1985 https://doi.org/10.1145/3149.214121*
+1. Michael J. Fischer, Nancy A. Lynch, Michael S. Paterson. "Impossibility of distributed consensus with one faulty process" ****Journal of the ACM April 1985 https://doi.org/10.1145/3149.214121*
 

@@ -179,6 +179,10 @@ C1=A建议1给B/C. B/C自己都倾向于1. (C1={1,1,1}并且它是1-valent)
 
 这是一个非常精妙的证明。证明过程不繁琐，但是我觉得，Nancy Lynch这些人能作为pathfinder想到这个思路真的非常了不起。
 
+## 实际例子
+
+Paxos有时候可能会多个回合才能决定结果, 错误的实现甚至会导致live lock. 比如大家从一个bivalent configuration开始（根据Lemma 2，一定存在），proposer A提出n1, proposer B提出n2, 如果n1 > n2, acceptor先接受了n1, B收到拒绝之后重新发起n3, 如果n3先于A的确认消息到达acceptor(异步网络消息顺序不确定性), 而且n3 > n1, 那么acceptor会拒绝A, 接受B, A可能会重复B的行为, 然后无限循环下去（Lemma 3保持bivalent). 
+
 ## 参考
 
 1. Michael J. Fischer, Nancy A. Lynch, Michael S. Paterson. "Impossibility of distributed consensus with one faulty process" ****Journal of the ACM April 1985 https://doi.org/10.1145/3149.214121*

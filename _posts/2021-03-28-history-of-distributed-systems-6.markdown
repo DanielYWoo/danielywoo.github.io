@@ -99,19 +99,21 @@ CAP其实是告诉我们在一个不可靠的分布式系统中safety和liveness
 
 另外对于CAP和FLP尽管表达了一些共性的问题看似有一些相似, 但是具体还是不同的scope和模型。
 
-相似处：FLP和CAP都蕴涵了liveness和safety的关系。
 
 不同之处：
 
 1. 早期的CAP缺乏严格模型, 而FLP的模型严谨。
 2. CAP是针对分布式存储(Brewer最早提出的时候)或者web service(Lynch证明)的特定工程场景，FLP的concensus问题则要宽泛的多，并且他的模型有不失一般性的原子寄存器和transition function，应用很广泛。
 3. 故障模型范围不同：CAP的模型里failure是指网络分区，其实也就是crash-recovery。而FLP的failure是指单个node crash，也就是crash-stop，显然FLP更故障领域更小，crash-recovery包含了crash-stop。
+4. agreement定义不同。CAP是指从外部访问端视角看待一致性，即便non-faulty节点之间没有agreement，通过内部过半一致让外部访问端感受一致也可以。而FLP是从参与节点的视角看一致性，所有non-faulty节点必须agree。
 
-因此, FLP通过一个更宽泛的模型(consensus, register and transition function)和更窄的触发条件(连Crash-stop failure, one faulty process都能触发，更不用说crash-recover failure或者Byzantine了，更不用说多个faulty process了)更加强有力的揭示了liveness和safety的关系。
+考虑到这些差异性, FLP和CAP其实没太大关系。非要说有什么相似之处的话，那就是FLP和CAP都蕴涵了liveness和safety的关系。
 
-而且它早在1985年就发表了, 但是它却并没有像CAP那样引起工程界的重视. 我想大概是因为工程总是滞后于理论科学, 当时分布式系统还处于中世纪黑暗时期, 而2000年后NoSQL萌芽的时候, 一个更加容易被工程师理解(误解)的CAP横空出世, 被工程界广为人知. 尽管CAP当时提出的时候确实缺乏规范化的模型和理论支持, 并且所表达的场景太模糊, 但是它确实比FLP更加直观，符合我们的直觉，FLP理解起来要复杂得多。尽管CAP所表达的liveness和safety的本质矛盾并非开创性思维，其实已经在更早的FLP等前辈的论文中有所体现, 但是 CAP的直观性和易理解对当时工程领域产生了很大的贡献。
+但是，FLP通过一个用途更宽泛的模型(consensus, register and transition function)和更容易触发的条件(连crash-stop failure, one faulty process都能触发，更不用说crash-recover failure或者Byzantine了，更不用说多个faulty process了)更加强有力的揭示了liveness和safety的关系。
 
-## 总结
+FLP早在1985年就发表了, 但是它却并没有像CAP那样引起工程界的重视. 我想大概是因为工程总是滞后于理论科学, 当时分布式系统还处于中世纪黑暗时期, 而2000年后NoSQL萌芽的时候, 一个更加容易被工程师理解(误解)的CAP横空出世, 被工程界广为人知. 尽管CAP当时提出的时候确实缺乏规范化的模型和理论支持, 并且所表达的场景太模糊, 但是它确实比FLP更加直观，符合我们的直觉，FLP理解起来要复杂得多。尽管CAP所表达的liveness和safety的本质矛盾并非开创性思维，其实已经在更早的FLP等前辈的论文中有所体现, 但是 CAP的直观性和易理解对当时工程领域产生了很大的贡献。
+
+## 系列总结
 
 至此，分布式系统的一致性系列结束。我常常觉得伸缩性不是个很难的问题，伸缩的同时保持一致性才是真正困难的问题，这是我写这个系列的原因之一。这个系列并没有提出非常多的实际工程解决方案，但是理解前辈们提出的理论基础，可以让我们在实际工程中看的更高，走的更远。如果你看完了本系列，有这样的感受，那我会为你感到非常开心。
 

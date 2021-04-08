@@ -77,7 +77,7 @@ Partition-tolerance: 这没得选, 这是一个前提. 在一个异步网络中,
 
 所以所谓的pick two其实在分布式系统的前提下其实就是pick one，只能有A或者C，P是没得商量的。然后在此基础上，对AP系统best-effort保证C，对CP系统best-effort保证A。这个定义就清晰的多了对吧？
 
-## 对比CAP和FLP
+## CAP扩展
 
 Nancy Lynch在对CAP证明的这篇论文里对CAP的核心做了总结和扩展，最重要的一句话是:
 >The CAP Theorem is simply one example of the fundamental fact that you cannot achieve both safety and liveness in an unreliable distributed system.
@@ -94,12 +94,26 @@ CAP其实是告诉我们在一个不可靠的分布式系统中safety和liveness
 
 遗憾的是, 社区在并没有非常深入理解CAP的情况下, 把很多NoSQL会标称自己是AP的还是CP的, 但是实际上这是不太科学, 比较武断的. 这篇论文里也提及到了一些保证一致性的同时Best-effort Availability方法, 比如chubby和zookeeper通过quorum来尽可能实现可用性. 另外也提到了一些保证可用性同时best-effort consistency的方法, 比如Akamai CDN. 不过我觉得更好的例子是Cassandra的写复制因子和轻量事务. 2015年的时候著名布道师Martin Kelppmann发表了一篇文章Please stop calling databases CP or AP[[5]](#参考), 有兴趣的同学可以看一下. 我个人也是觉得CAP提出的时候虽然Brewer教授从未称之为Theorem并且表达非常模糊缺乏模型, 但是由于他比FLP易懂(也易误解), 在工程领域正好赶上NoSQL起步的那几年, 传播非常快, 误解也非常多.
 
-另外对于CAP和FLP尽管表达了一些共性的问题看似有一些相似, 但是具体还是不同的scope和模型, 但FLP和CAP都蕴涵了liveness和safety的关系, 只是早期的CAP太宽泛缺乏模型, 而FLP的模型严谨. 
 
-CAP是针对分布式存储(最早)或者web service(Lynch证明)的特定工程场景，FLP的concensus问题则要宽泛的多，并且他的模型有非常严谨明确的的原子寄存器和transition function，没有模糊或者歧义。CAP的failure是指网络分区，而FLP的failure是指单个node crash，有时候在异步网络里我们是无法分辨二者区别的, 但是二者显然是不同的。
+## 对比CAP和FLP
 
-我个人认为, FLP有着非常严谨的模型和理论支撑, 它通过一个更宽泛的模型(consensus, register and transition function)和更窄的触发条件(连Crash stop failure, one faulty process都能触发，更不用说crash recover failure或者Byzantine了，更不用说多个faulty process了)更加强有力的揭示了liveness和safety的关系, 而且它早在1985年就发表了, 但是它却并没有像CAP那样引起工程界的重视. 我想大概是因为工程总是滞后于理论科学, 当时分布式系统还处于中世纪黑暗时期, 而2000年后NoSQL萌芽的时候, 一个更加容易被工程师理解(误解)的CAP横空出世, 被工程界广为人知. 尽管CAP当时提出的时候确实缺乏规范化的模型和理论支持, 并且所表达的场景太模糊, 但是它确实对工程领域产生了很大的影响和贡献. 即使他并没有跳出更早的FLP所展现出来的liveness和safety的本质矛盾. 
+另外对于CAP和FLP尽管表达了一些共性的问题看似有一些相似, 但是具体还是不同的scope和模型。
 
+相似处：FLP和CAP都蕴涵了liveness和safety的关系。
+
+不同之处：
+
+1. 早期的CAP缺乏严格模型, 而FLP的模型严谨。
+2. CAP是针对分布式存储(Brewer最早提出的时候)或者web service(Lynch证明)的特定工程场景，FLP的concensus问题则要宽泛的多，并且他的模型有不失一般性的原子寄存器和transition function，应用很广泛。
+3. 故障模型范围不同：CAP的模型里failure是指网络分区，其实也就是crash-recovery。而FLP的failure是指单个node crash，也就是crash-stop，显然FLP更故障领域更小，crash-recovery包含了crash-stop。
+
+因此, FLP通过一个更宽泛的模型(consensus, register and transition function)和更窄的触发条件(连Crash-stop failure, one faulty process都能触发，更不用说crash-recover failure或者Byzantine了，更不用说多个faulty process了)更加强有力的揭示了liveness和safety的关系。
+
+而且它早在1985年就发表了, 但是它却并没有像CAP那样引起工程界的重视. 我想大概是因为工程总是滞后于理论科学, 当时分布式系统还处于中世纪黑暗时期, 而2000年后NoSQL萌芽的时候, 一个更加容易被工程师理解(误解)的CAP横空出世, 被工程界广为人知. 尽管CAP当时提出的时候确实缺乏规范化的模型和理论支持, 并且所表达的场景太模糊, 但是它确实比FLP更加直观，符合我们的直觉，FLP理解起来要复杂得多。尽管CAP所表达的liveness和safety的本质矛盾并非开创性思维，其实已经在更早的FLP等前辈的论文中有所体现, 但是 CAP的直观性和易理解对当时工程领域产生了很大的贡献。
+
+## 总结
+
+至此，分布式系统的一致性系列结束。我常常觉得伸缩性不是个很难的问题，伸缩的同时保持一致性才是真正困难的问题，这是我写这个系列的原因之一。这个系列并没有提出非常多的实际工程解决方案，但是理解前辈们提出的理论基础，可以让我们在实际工程中看的更高，走的更远。如果你看完了本系列，有这样的感受，那我会为你感到非常开心。
 
 ## 参考
 1. Fox and E.A. Brewer, "Harvest, Yield and Scalable Tolerant Systems," *Proc. 7th Workshop Hot Topics in Operating Systems* (HotOS 99)
@@ -118,6 +132,5 @@ CAP是针对分布式存储(最早)或者web service(Lynch证明)的特定工程
 4. [Eventual Consistency](/history-of-distributed-systems-4)
 5. [Serializability Consistency, External Consistency](/history-of-distributed-systems-5)
 6. [CAP, FLP](/history-of-distributed-systems-6)
-
 
 

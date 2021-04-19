@@ -20,7 +20,7 @@ PRAM的模型只能用于一致性要求比较弱, 没有进程间因果关系�
 
 * 基本模型类似于Herlichy &amp; Wing 在定义Linearizability中用到的FIFO模型 [[3]](#参考)
 * L<sub>i</sub>: 某个进程Pi的本地执行历史
-* o<sub>1</sub> &gt; o<sub>2</sub>: 在某个Pi上操作o<sub>1</sub>在program order上早于o<sub>2</sub>
+* o<sub>1</sub> &gt; o<sub>2</sub>: 在某个Pi上操作o<sub>1</sub>在[program order](/program-order-in-distributed-systems)上早于o<sub>2</sub>
 * H: {L<sub>1</sub>, L<sub>2</sub> .... }的集合。
 
 那么对于Linearizability Consistency和Sequential Consistency来说，所有的Pi都应该可以看到一个一样的序列化S, 是H中所有操作的total order，并且满足所有的L<sub>i</sub>中的program order。

@@ -82,7 +82,7 @@ Partition-tolerance: 这没得选, 这是一个前提. 在一个异步网络中,
 Nancy Lynch在对CAP证明的这篇论文里对CAP的核心做了总结和扩展，最重要的一句话是:
 >The CAP Theorem is simply one example of the fundamental fact that you cannot achieve both safety and liveness in an unreliable distributed system.
 
-这样来看，Consistency其实可以从linearizability一致性扩展到safety。一个符合linearizability一致性的算法, 如果在某些情况下（丢包或者延迟消息）计算的结果不按照program order执行, 所有节点都得到了一样的错误的结果, 这虽然满足一致性(agreement)但是已经不满足正确性(validity)了, 这也算是失去了safety.
+这样来看，Consistency其实可以从linearizability一致性扩展到safety。一个符合linearizability一致性的算法, 如果在某些情况下（丢包或者延迟消息）计算的结果不按照[program order](/program-order-in-distributed-systems)执行, 所有节点都得到了一样的错误的结果, 这虽然满足一致性(agreement)但是已经不满足正确性(validity)了, 这也算是失去了safety.
 
 Availability可以扩展为liveness而不止于CAP所说的可用性, 它还包含了making progress的要求. 比如, 每次消息发送给某个节点, 这个节点都可以把状态向目标状态更进一步, 有所进展. 原来CAP的availability只是说web service收到请求一定要返回个结果, 这是一个最常见的liveness的场景, 但是不是代表了所有的liveness的场景.
 

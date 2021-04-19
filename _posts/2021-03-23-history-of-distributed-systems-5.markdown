@@ -59,7 +59,7 @@ Sb: {a2l, a22, a23, all, a12, a13}.
 
 <img src="../images/2021-03-23/conflict-equivalent.png" max-height="500px">
 
-这种情况的本质就是不改变causal(conflict)关系的情况下，把没有causal关系的操作保持单个进程内的program order进行排序，得到一个完全事务串行化的schedule。因为没有改变causal关系，所以前后两个schedule等同，那么我们认为原始的schedule中的conflict操作都被等同于分割到两个完全串行化的事务了，所以我们认为这也算是一种符合Serializability Consistency的情况。
+这种情况的本质就是不改变causal(conflict)关系的情况下，把没有causal关系的操作保持单个进程内的[program order](/program-order-in-distributed-systems)进行排序，得到一个完全事务串行化的schedule。因为没有改变causal关系，所以前后两个schedule等同，那么我们认为原始的schedule中的conflict操作都被等同于分割到两个完全串行化的事务了，所以我们认为这也算是一种符合Serializability Consistency的情况。
 
 #### View Equivalent Serializability
 

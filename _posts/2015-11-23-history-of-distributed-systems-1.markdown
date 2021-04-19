@@ -84,7 +84,7 @@ Leslie Lamport在Lamport Clock之后第二年1979年发表了一篇论文 "How t
 
 >    A multiprocessor is said to be sequentially consistent if the result of any execution is the same as if the operations of all the processors were executed in some sequential order, and the operations of each individual processor appear in this sequence in the order specified by its program.[How to Make a Multiprocessor Computer That Correctly Executes Multiprocess Programs by Leslie Lamport ,1979]
 
-这看起来很晦涩, 我们用通俗但不严谨的语言来表述, 他蕴含了两个部分, 第一是事件历史在各个进程上看全局一致, 第二是单个进程的事件历史在全局历史上符合程序顺序(program order).
+这看起来很晦涩, 我们用通俗但不严谨的语言来表述, 他蕴含了两个部分, 第一是事件历史在各个进程上看全局一致, 第二是单个进程的事件历史在全局历史上符合程序顺序[program order](/program-order-in-distributed-systems).
 
 第一个要求比较容易理解, 给个例子: 假设有四个进程P0, P1, P2, P3分别读取和写入一个变量x, 横轴从左往右表示物理时间的流逝. 对于下图中A的情况这就是大家比较容易理解的情况, 这就是Sequential Consistency. B图中你可能觉得, 好像P2和P3读出来的x变量顺序和物理时间不一致了么, 但是对于P2和P3来说, 他们虽然对x的历史的顺序和真实物理时间不一致, 但是P2和P3至少"错的一致"啊, 所以只要P0, P1, P2, P3全体都认为x是先被P1写入的2, 后被P0写入的1, 那么我们认为这种情况仍然是一致的. 这是符合Sequential Consistency的第一个条件的.
 

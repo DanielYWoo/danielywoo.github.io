@@ -2,6 +2,7 @@
 layout: post
 title:  "分布式系统一致性的 program order"
 date:   2021-04-11 11:00:00
+published: true
 ---
 
 ## Overview

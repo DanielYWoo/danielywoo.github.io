@@ -24,7 +24,7 @@ Eventual Consistency不要求其他进程看到一样的历史，因此对于上
 
 我稍微总结了一下，对Eventual Consistency给出一个严格定义
 
-* 对于一个进程P1，他自己的读写遵循programming order。
+* 对于一个进程P1，他自己的读写遵循program order。
 * 如果P1 W(x), 然后P2 W(x)，其它进程允许看到随意顺序，但是最终都会看到P2 W(x)的值。
 
 作者还提及到Eventual Consistency有一些变体，我觉得有两个变体很值得给大家分享一下。

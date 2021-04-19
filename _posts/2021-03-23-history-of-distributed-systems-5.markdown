@@ -59,7 +59,7 @@ Sb: {a2l, a22, a23, all, a12, a13}.
 
 <img src="../images/2021-03-23/conflict-equivalent.png" max-height="500px">
 
-这种情况的本质就是不改变causal(conflict)关系的情况下，把没有causal关系的操作保持单个进程内的programming order进行排序，得到一个完全事务串行化的schedule。因为没有改变causal关系，所以前后两个schedule等同，那么我们认为原始的schedule中的conflict操作都被等同于分割到两个完全串行化的事务了，所以我们认为这也算是一种符合Serializability Consistency的情况。
+这种情况的本质就是不改变causal(conflict)关系的情况下，把没有causal关系的操作保持单个进程内的program order进行排序，得到一个完全事务串行化的schedule。因为没有改变causal关系，所以前后两个schedule等同，那么我们认为原始的schedule中的conflict操作都被等同于分割到两个完全串行化的事务了，所以我们认为这也算是一种符合Serializability Consistency的情况。
 
 #### View Equivalent Serializability
 
@@ -73,7 +73,7 @@ Sb: {a2l, a22, a23, all, a12, a13}.
 
 3. **Update Read:** 对任何一个变量X，在两个schedule里都是T1 W(X) < T2 R(X), 那么这两个schedule是满足第三个条件的。
 
-举个例子，下图中两个schedule里，我分别用绿色，蓝色，紫色来代表条件1/2/3。我们把左边的schedule保持T1和T2内部的programming order不变的情况下重排称右边的schedule，我们发现六条线一个也没少，所以二者是view equivalent的。因为右边的schedule是serial schedule，因此左边的原始schedule符合Serializability Consistency。
+举个例子，下图中两个schedule里，我分别用绿色，蓝色，紫色来代表条件1/2/3。我们把左边的schedule保持T1和T2内部的program order不变的情况下重排称右边的schedule，我们发现六条线一个也没少，所以二者是view equivalent的。因为右边的schedule是serial schedule，因此左边的原始schedule符合Serializability Consistency。
 
 <img src="../images/2021-03-23/view-equivalent.png" max-height="500px">
 

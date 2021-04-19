@@ -96,25 +96,13 @@ Leslie Lamport在Lamport Clock之后第二年1979年发表了一篇论文 "How t
 
 如果对于x的两次写入都是发生在同一个进程, 比如P0, 那么前面B的情况也不符合Sequential Consistency了. 为什么呢? 因为这样此P0就不符合program order了. 我们来看Lamport的定义中第二个方面关于program order的解释.
 
-第二个方面对于没有多线程开发经验的工程师稍微难理解一些. 比如两个进程P1, P2上发生的事件分别是1,2, 3, 4和5, 6, 7, 8, 如下图所示. 那么从全局来看我们必须要让事件交错成一个有序的集合. 从下图右边global-1的观点来看这样的交错和P1/P2是符合Sequential Consistency的, 但是global-2就不是, 其中1,4,3,2的顺序并不是P1的"program order". 第一种情况中P1和P2的原始顺序在交错中仍然得到了保留, 这个过程叫做arbitrary order-preserving interleaving.
+第二个方面对于没有多线程开发经验的工程师稍微难理解一些. 比如两个进程P1, P2上发生的事件分别是1, 2, 3, 4和5, 6, 7, 8。假设 如下图所示. 那么从全局来看我们必须要让事件交错成一个有序的集合，这个过程叫做arbitrary interleaving。从下图右边global-1的观点来看这样的交错是符合Sequential Consistency的, 这个过程叫做arbitrary order-preserving interleaving。但是global-2就不一定符合Sequential Consistency, 如果1-2-3-4操作的是同一个变量之间存在因果关系不可重排序，那么其中1,4,3,2的顺序显然不是P1的"program order". 
 
 <img src="../images/2015-11-23/sc3.png" max-height="500px">
 
-不熟悉多线程编程的工程师可能会问, 为什么P1和global-2中对于3和2的顺序有不同的观点? 为什么program order还会变? 我这里稍微解释一下CPU读写内存的工作原理, 熟悉C++/Java内存模型的程序员可以跳过这部分.
+不熟悉多线程编程的工程师可能会问, 为什么原始的P1的执行顺序1-2-3-4在执行期会变成和global-2中1-4-3-2的顺序？这个解释比较长，我把它挪到了一篇新文章里，对此有兴趣的可以先读一下。处理器之间的可见性问题和乱序问题, 会让每个处理器对历史事件产生不同的观点. Memory fence虽然可以解决这个问题但是它会打破处理器的pipeline产生stall, 目前的主流服务器处理器有48个pipeline stages, 产生一次stall的代价非常高. 这就是为什么我们需要共享控制变量或者变量之间存在因果关系的时候我们才需要memory fence, 这也是为什么会有Causal Consistency和Weak Consistency模型, 我们将来会介绍。
 
-下面是典型的志强两路处理器的样子. 每个处理器的每个core有自己的L1/L2 cache, 所有的core共享L3 cache, 然后两颗处理器之间通过环形QPI通道实现cache coherence. 这样, 整个cache系统就成为了所有处理器核心看内存的窗口, 或者说是唯一事实.
-
-<img src="../images/2015-11-23/sc4.png" max-height="500px">
-
-处理器的一个cycle很快, 1ns都不到, 而内存访问很慢, 需要几百个cycle了, 就算是最快的L1的访问也需要三个cycle, 只有寄存器能跟得上CPU cycle, 所以为了充分利用处理器, 在core和L1之间插入了接近寄存器速度的MOB(Memory Ordering Buffers). 上图因为空间有限只画了Load Buffer和Store Buffer, 其实还有其他类型的buffer比如WCB(Write Combine Buffer).
-
-Load Buffer, Store Buffer和WCB可以提高处理器整体性能. 比如你对一个线程间的共享变量做密集的循环, 这个变量的i++可能是发生在寄存器内或者Store Buffer内, 当循环结束的时候才写入L1/L2 cache, 然后通过QPI让另外的处理器看到变化, 在这个密集循环过程中另外一个处理是看不到这个变量的变化历史的. 还有就是如果你对三个变量写入, 那么三次内存访问需要大概900个cycle, 如果这三个变量地址连续, 那么很有可能他们碰巧在同一个64字节的cache line里, 那么处理器可能会把三个变量先写入Write Combine Buffer, 稍后合并成一次写操作回到cache和内存, 这就只需要300个cycle, 这种优化叫做Write Combine. Store Buffer和Write Combine Buffer提升了处理器利用率减少了写等待, 但是会导致一个CPU的内存写入对另外一个CPU的读取显现出延迟或者不可见. 这时候需要一个fence禁止reorder并等待flush结束. (Java里面volatile读取前就会放一个lfence, 写入后会放一个sfence, 很多Java程序员认为volatile是让CPU直接访问主存不经过cache, 这是错误的观点).
-
-从另外一个角度看, 因为解析地址和读取内存也是非常慢, 总共要几百个cycle, 有时候处理器在不破坏局部指令依赖关系的前提下可以直接更改执行顺序. 这种情况下处理器的乱序减少了等待时间, 提高了效率, 但是因为乱序会导致你会读到过期的数据. 就算是别的处理器已经flush了Store Buffer, 你也读不到最新的状态. 要读到最新的数据, 也需要一个memory fence禁止reordering并等待Load Buffer内的数据被清除. 大多数MESI协议的变体都会有一个invalidate queue, 其他处理器对cache line做的改动的都会作为消息(Invalidate消息)传递给这个处理器, 一个read fence可以把invalidate queue里之前所有的消息取出来去把load store和寄存器中的cache line清除掉, 来保证当前处理器可以读取到最新的数据.
-
-所以, 处理器之间的可见性问题和乱序问题, 会让每个处理器对历史事件产生不同的观点. Memory fence虽然可以解决这个问题但是它会打破处理器的pipeline产生stall, 目前的主流服务器处理器有48个pipeline stages, 产生一次stall的代价非常高. 这就是为什么我们需要共享控制变量或者变量之间存在因果关系的时候我们才需要memory fence, 这也是为什么会有Causal Consistency和Weak Consistency模型, 我们将来会介绍.
-
-好了, 你现在明白了为什么program order会被reorder, 现在回过来看看Lamport在他的论文中为了阐述Sequential Consistency而提出的这个有趣的小例子, 从一个更高层的角度, 程序员的角度来看第二个条件.
+好了, 你现在明白了为什么reoder会破坏program order, 现在回过来看看Lamport在他的论文中为了阐述Sequential Consistency而提出的这个有趣的小例子, 从一个更高层的角度, 程序员的角度来看第二个条件。
 
 {% highlight bash linenos %}
 process 1
@@ -130,14 +118,45 @@ if a = 0 then
     b = 0
 {% endhighlight %}
 
-这看起来像是Dekker的Mutual Exclusion算法去掉turn变量的简化版, a和b初始为0, 分别是两个进程的控制变量来阻止对方进入critical section, 如果系统满足sequential consistency, 那么process 1和2是不能同时进入critical section的. 这两个进程可能都无法进入, 但是最多有一个进程可以进入. 但是如果系统不满足sequential consistency的第二个条件, 那么有可能两个进程同时进入这段critical section. 你可能会问, 怎么可能? 如果你看明白了上面关于处理器访问内存的原理, 你会知道有可能进程1写入a=1被write combine延迟了, 或者判断b=0的那个读取被speculative read了, 那么两个进程就会同时进入critical section.
+这看起来像是Dekker的Mutual Exclusion算法去掉turn变量的简化版, a和b初始为0, 分别是两个进程的控制变量来阻止对方进入critical section, 如果系统满足sequential consistency, 那么process 1和2是不能同时进入critical section的. 举两个例子：
+
+这是一个可能的满足program order的history，P1和P2都没有进入critical section：
+```
+P1  W(a)=1 我要做                R(b)=1 你做我就不做了
+P2                W(b)=1 我要做                       R(a)=1 你做我就不做了
+```
+这是一个可能的满足program order的history，二者先后进入critical section：
+```
+P1  W(a)=1  R(b)=0  <critical>  W(a)=0  
+P2                                       W(b)=1 R(a)=0 你做完了那我也做
+```
+
+但是如果系统不满足sequential consistency的第二个条件(program order), 那么有可能两个进程同时进入这段critical section. 你可能会问, 怎么可能? Leslie Lamport在它的论文里举了这样一个例子。他假设有两个处理器和两个内存模块，有这样个执行顺序
+
+1. Processor 1 sends the "write a = 1" request to the memory module 1. The module is currently busy.
+2. Processor 1 sends the "fetch b" request to the memory module 2. The module is free, and execution is begun. （P1进入critical section)
+3. Processor 2 sends its "write b = 1" request to the memory module 2. This request will be executed after processor 1's "fetch b" request is completed.
+4. Processor 2 sends its "fetch a" request to the memory module 1. The module is still busy.
+
+至此，由于memory module busy，有两个访问内存的pending request，P1写a 和 P2读a。等到memory module不busy了，如果P1先执行了写a，那没什么问题。但是如果P2先执行读到了a=0，那么P2会进入critical section。而P1之前第二步已经进入critical section了，两个进程一起撞车了。
+
+注意，Leslie给的例子是P1写入module 1 busy，然后不等待内存写入结束就执行fetch b了。
+```
+memory    ..... delay ..... delay ..... delay ..... done 
+         /
+P1  W(a)=1   R(b)=0    <critical>    W(a)=0  
+P2                   W(b)=1   R(a)=0 a还没写入成功，误认为P1不做
+```
+<b>其实这是和现代处理器的store buffer和write combine buffer的效果一样的，相当于CPU写入只到了buffer或者L1 cache，就继续执行下一条指令了，从这个进程自己的角度来看没什么问题。但是由于这个写入还没有进入L3 cache，所以P2看不到这个写入，从P2来看，最终效果相当于P1写a的操作被延迟到读b操作之后了</b>。还有其它的情况，Leslie没有提及，比如P1在判断b=0的时候，这个对b的读取如果在P2写入b=1之前，就被speculative read了, 那么两个进程就会同时进入critical section。限于篇幅此处不做图解释和展开了。
+
+如果我们不允许单个进程内两个内存操作reorder，我们去掉任何buffer和cache，如果memory module busy我们就等他完成，把内存操作FIFO串行化，那么我们试着interleaving一下操作顺序再看看，你会发现这个算法在多个进程上就正确了（从其它进程观察也符合program order）。
 
 Leslie Lamport为此提出了如何实现sequential consistency的内存访问:
 
 1. Each processor issues memory requests in the order specified by the program.
 2. Memory requests to any individual memory module are serviced from a single FIFO queue.
 
-第一点就是禁止reordering, 第二点就是FIFO的内存控制器. 这样的系统可想而知, 会比我们今天使用的系统慢几百倍, 没有任何一款主流处理器能够达到sequential consistency. 所以为了换取效率, 维护数据一致性变成了开发人员的责任, 系统只提供给你memory fence, CAS, LL/SC之类的基础工具. 无论你是C++还是Java开发人员都要非常小心的使用线程, 其实即便是非常有经验的开发人员有时候也会在线程上犯错, 近年来出现的lock-free和wait-free的数据结构比基于锁的实现运行期更加动态, 更加难以正确实现, 出现了bug之后非常难解决. 所以我们必须深入理解一致性, 在设计的时候想清楚各种边际条件来避免多线程的问题.
+第一点就是从CPU角度来看内存操作指令总是立即发出没有延迟, 第二点就是从内存控制器角度来看FIFO串行化，如果内存控制器繁忙，那么CPU的内存读写指令要排队等待。这样的系统可想而知, 相当于没有了缓存和re-ordering。这样的系统会比我们今天使用的系统慢几百倍, 没有任何一款主流处理器能够达到sequential consistency. 所以在分布式系统中，为了换取效率, 维护数据一致性变成了开发人员的责任, 多路处理器的微观分布式系统只提供给你memory fence, CAS, LL/SC之类的基础工具. 无论你是C++还是Java开发人员都要非常小心的使用线程, 其实即便是非常有经验的开发人员有时候也会在线程上犯错, 近年来出现的lock-free和wait-free的数据结构比基于锁的实现运行期更加动态, 更加难以正确实现, 出现了bug之后非常难解决. 所以我们必须深入理解一致性, 在设计的时候想清楚各种边际条件来避免多线程的问题.
 
 早期一致性问题都是在多路处理器级别研究的, 但是往更宏观的分布式系统来看, 多个服务器节点的写操作也经常会有本地buffer, 也会产生类似write combine的副作用, 这些问题在不同规模上看都是类似的.
 
@@ -149,7 +168,7 @@ Leslie Lamport为此提出了如何实现sequential consistency的内存访问:
 
 ## Linearizability, 1987
 
-Linearizability模型的一致性高于 sequential consistency, 有时候也叫做strong consistency或者atomic consistency, 可以说是我们能够实现的最高的一致性模型. 它是Herlihy and Wing在1987年提出的[[4]](#参考). 通过前面的讨论我们现在知道sequential consistency 只关心所有进程或者节点的历史事件存在唯一的偏序关系, 它不关心时间顺序. 而linearizability相当于在sequential consistency的基础上再去关心时间顺序, 在不依赖物理时钟的前提下, 区分非并发操作的先后. Linearizability是一个很重要的概念, 如果你不了解它你就无法真正理解Raft算法等.
+Linearizability模型的一致性高于 sequential consistency, 有些人把它叫做strong consistency或者atomic consistency, 可以说是我们能够实现的针对单一操作的最高的一致性模型（后面还会提到多操作的模型）。 它是Herlihy and Wing在1987年提出的[[4]](#参考). 通过前面的讨论我们现在知道sequential consistency 只关心所有进程或者节点的历史事件存在唯一的偏序关系来确保program order, 它不关心进程间操作发生的真实的时间顺序. 而linearizability相当于在sequential consistency的基础上再去关心时间顺序, 区分非并发操作的先后. Linearizability是一个很重要的概念, 如果你不了解它你就无法真正理解Raft算法等.
 
 我们可以用一个高等数据结构比如队列来描述Linearizability的定义(来源于Herlihy & Wing). 假设Enq x A表示A进程开始尝试把x加入队列尾部, OK A表示操作结束, Deq A表示A进程开始从队列头部取出一个元素, OK y A表示取出了y并操作结束. 下面左边是物理时间上的操事件顺序, 那么我们如果再最后面加一个OK A那么, 你会发现所有的事件的起始/结束都是成对的.
 
@@ -162,11 +181,11 @@ Linearizability模型的一致性高于 sequential consistency, 有时候也叫�
 
 那么在不违背队列的正确行为的前提下, S就是H的一个linearization. 下面的例子中, 最左边是物理时间上发生的H, 中间是补齐成对之后的H', 右边是H'的一个linearization.
 
-<img src="../images/2015-11-23/linear1.png" max-height="500px">
+<img src="../images/2015-11-23/linear1.png" max-height="500px"/>
 
-用通俗但是不严谨的话来说, Linearization蕴含了两个特性, 第一, S中的事件起始/结束是"紧挨着"的表示粒度上必须是整个事件, 事件之间不能交错, (就是假设一个调用的结束事件返回之前我们就认为事件已经完成了, 把并发的调用时间缩短来产生顺序关系). 第二, H中全序关系延续到S中, 说明S仍然存在原始事件的物理时间的顺序. 如果你没看明白这么拗口的定义, 没关系, 看看下面这个图你就很容易明白了.
+用通俗但是不严谨的话来说, Linearization蕴含了两个特性, 第一, S中的每对起始/结束是"紧挨着"的表示粒度上必须是个完整的原子事件, 事件之间不能交错. 第二, H中全序关系延续到S中, 说明S仍然存在原始事件的物理时间的顺序. 如果你没看明白这么拗口的定义, 没关系, 看看下面这个图你就很容易明白了.
 
-<img src="../images/2015-11-23/linear2.png" max-height="500px">
+<img src="../images/2015-11-23/linear2.png" max-height="500px"/>
 
 并不是所有的情况都是Linerizable的, 比如我们的队列行为是这样的:
 
@@ -183,7 +202,7 @@ Linearizability模型的一致性高于 sequential consistency, 有时候也叫�
     
     Enq x A -> OK A -> Enq y B -> OK B -> Deq A -> OK y A
 
-但是这两个排法都违背了队列的FIFO行为, 这样的事件顺序不符合Linearizable.
+但是这两个排法都违背了队列的FIFO行为, 这样的事件顺序不符合Program Order，也不满足Linearizable.
 
 再给一个例子, 这个是可以的
 
@@ -195,9 +214,9 @@ Linearizability模型的一致性高于 sequential consistency, 有时候也叫�
 
     Enq x A -> OK A -> Deq B -> OK x B
 
-你要是觉得这种定义很晦涩, 没关系, 用通俗的语言来讲, 就是A写入了x结束后, 接下来B一定能读出来, 这虽然不严谨, 但是确实是Linearizability的本质. 下图中从左往右是物理时间, 长条是指我们观察到的一个事件的开始和结束, 其中P0把x的值从0改写为1. 长条是一个事件的时间窗口. 这个过程中如果P1去读取x, 如果P1的读和P0的写在时间上有重叠, 二者是并发的, 那么P1读出来的无论是0还是1, 都算符合linearizability, 你认为P1的读事件发生在P0的写事件之前或者之后,都可以. P2和P0之间也是这样. 但是P2和P1读取x的结果必须是要么0-0, 要么0-1, 要么1-1, 但是不能是1-0. 最后的P3因为起始晚于P0的结束, 所以要符合linerizability就只能读出x=1才行, 我们必须认为P3的读事件发生在P0的写事件之后.
+你要是觉得这种定义很晦涩, 没关系, 用通俗的语言来讲, 就是A写入了x结束后, 接下来B一定能读出来x。这虽然不严谨, 但是确实是Linearizability的本质. 下图中从左往右是物理时间, 长条是指我们观察到的一个事件的开始和结束, 其中P0把x的值从0改写为1. 长条是一个事件的时间窗口. 这个过程中如果P1去读取x, 如果P1的读和P0的写在时间上有重叠, 二者是并发的, 那么P1读出来的无论是0还是1, 都算符合linearizability, 你认为P1的读事件发生在P0的写事件之前或者之后,都可以. P2和P0之间也是这样. 但是P2和P1读取x的结果必须是要么0-0, 要么0-1, 要么1-1, 但是不能是1-0. 最后的P3因为起始晚于P0的结束, 所以要符合linerizability就只能读出x=1才行, 我们必须认为P3的读事件发生在P0的写事件之后.
 
-<img src="../images/2015-11-23/linear3.png" max-height="500px">
+<img src="../images/2015-11-23/linear3.png" max-height="500px"/>
 
 当事件之间没有重叠, 中间有个"小间隔"的时候, Linearizability必须给出明确的先后顺序. 而前面介绍的sequential consistency则不需要这样的要求,  如果上面的例子中如果P3读出来是0, 那么也是符合Sequential Consistency的.
 
@@ -205,15 +224,17 @@ Linearizability模型的一致性高于 sequential consistency, 有时候也叫�
 
 下面是Herlihy和Wing的论文中给出的例子, 大家可以看看, 哪些是符合Linearizability的?
 
-<img src="../images/2015-11-23/linear4.png" max-height="500px">
+<img src="../images/2015-11-23/linear4.png" max-height="500px"/>
 
 图片来源: Linearizability : A Correctness Condition for Concurrent Objects
 
-Linearizability的两个很好的特性Locality和Non-blocking, 有兴趣的同学可以自己去看看, 限于篇幅本文不再介绍了. 如果你的理解还有点不清晰, 下一篇文章中我们介绍Paxos算法的时候你应该能更好的理解它.
+前面我们讲过，由于各种时钟误差，分布式系统是不可能通过wall clock来实现高级别的一致性的，这里我们说的两个操作有先后，是指在实现中两个操作有因果关系，比如第一个操作完成了之后才执行第二个操作，或者通过Lamport Clock找出操作之间的先后顺序。比较特殊的是Spanner对于没有因果关系的操作的排序利用了物理时钟，在一个操作完成后它再通过sleep一定的时间，确保物理时钟误差范围，从而区分两个没有因果关系的操作的先后顺序。某种程度上讲，这是个小作弊，相当于把因为时钟误差而有可能并行（但是没并行）的操作也直接当作并行了。另外Spanner在物理时钟发生故障的时候，节点之间也会有顺序的不一致。后续的文章我们会讲到Spanner。 
+
+如果你的理解还有点不清晰, 下一篇文章中我们介绍Paxos算法的时候你应该能更好的理解它.
 
 Linearizability和Sequential Consistency你可以把它们想象成一个烧烤架, 上面有很多烤串, 你不可以把肉和洋葱在一个烤叉上互换位置(单个进程需要符合program order), 但是你可以拨动所有烤叉上的肉和洋葱, 让他们从左往右排列出来一个先后顺序. 不管是Linearizability还是Sequential Consistency, 那么下面A和C谁在前面都可以, 因为A和C是并行的, 但是C和B在Linearizabiltiy中必须C在前B在后, 而Sequential Consistency中B和C的顺序可以互换.
 
-<img src="../images/2015-11-23/linear5.png" max-height="500px">
+<img src="../images/2015-11-23/linear5.png" max-height="500px"/>
 
 这么看Linearizability和Sequential Consistency是不是很像? 过去绝大多数人会认为Linearizability的定义只是比Sequential consistency多了一个物理时间先后的约束, 所以认为他们很像, 甚至认为它们基本是一个东西, 性能也应该差不多. 但是后来以色列科学家Hagit Attiya和Jennifer Welch在1994年发表的论文让大家意识到他们其实是完全不同的概念, 性能差别很大. (Sequential Consistency versus Linearizabiltiy, ACM Transactions on Computer Systems, Vol 12, No 2, May 1994, Pages 91-122) 过去人们在探讨这两种一致性模型的时候没有真正分析过他们的理论上的性能差别, Attiya第一次给出了具体的分析.
 

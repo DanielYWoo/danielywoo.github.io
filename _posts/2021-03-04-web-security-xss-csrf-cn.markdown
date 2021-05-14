@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Web 安全指导 - XSS and CSRF"
-subtitle:  "跨站伪造请求不需要CSRF Token"
+subtitle:  "XSS & CSRF 安全规范，跨站伪造请求不需要CSRF Token"
 date:   2021-03-04 18:00:00
 published: true
 ---

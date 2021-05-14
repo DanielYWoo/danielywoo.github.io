@@ -62,6 +62,36 @@ return (<a href={val}>mylink</a>)
 {% endraw %}
 ```
 
+Vue也是同样，大多数时候他可以保护你，除非你有以下特殊情况：
+
+##### 第一种 - user input HTML template
+```
+new Vue({
+  el: '#app',
+  template: `<div>` + userProvidedString + `</div>`
+})
+
+<div v-html="userProvidedHtml"></div>
+
+h('div', {
+  domProps: {
+    innerHTML: this.userProvidedHtml
+  }
+})
+
+<div domPropsInnerHTML={this.userProvidedHtml}></div>
+```
+
+##### 第二种 - user input hyperlink
+```
+<a v-bind:href="userProvidedUrl">
+  click me, the userProvidedUrl could be "javascript:alert(1)"
+</a>
+```
+
+##### 第三种 - user input scripts
+Never render a script.
+
 #### 服务端渲染 (Server Side Rendering)
 我不想过多地谈论SSR（服务器端渲染），因为无论JSP，PHP，FreeMarker还是Thymeleaf，这种模式都将消失。我们仍然使用SSR的唯一场景是SEO。
 

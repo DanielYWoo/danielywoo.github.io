@@ -64,6 +64,37 @@ return (<a href={val}>mylink</a>)
 {% endraw %}
 ```
 
+Vue cannot protect your if you are trying the following exceptions.
+
+##### Exception 1 - user input HTML template
+```
+new Vue({
+  el: '#app',
+  template: `<div>` + userProvidedString + `</div>`
+})
+
+<div v-html="userProvidedHtml"></div>
+
+h('div', {
+  domProps: {
+    innerHTML: this.userProvidedHtml
+  }
+})
+
+<div domPropsInnerHTML={this.userProvidedHtml}></div>
+```
+
+##### Exception 2 - user input hyperlink
+```
+<a v-bind:href="userProvidedUrl">
+  click me, the userProvidedUrl could be "javascript:alert(1)"
+</a>
+```
+
+##### Exception 3 - user input scripts
+Never render a script.
+
+
 #### Server Side Rendering
 I don't want to talk too much about SSR (server side rendering) since this pattern is dying, no matter in JSP, PHP, FreeMarker, or Thymeleaf. The only scenario we still use SSR is SEO. 
 

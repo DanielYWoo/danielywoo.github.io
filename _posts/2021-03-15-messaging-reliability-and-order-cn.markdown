@@ -6,9 +6,9 @@ date:   2021-03-15 18:00:00
 published: true
 ---
 
-## 概述 
+## 概述
 
-在分布式系统中，消息可靠性是数据一致性的基础，通常需要一次或至少一次传递消息。实际上，严格来讲，没有人能够以完全一次的保证来实现消息传递系统，这是不可能实现的。实际上，我们让用户方至少一次处理幂等和重复数据删除，以模拟一次语义。实际上，即使是最少一次也不容易实现，我们将在本文中讨论原因。我们还将讨论消息传递一致性问题中最困难的部分-排序。 
+在分布式系统中，消息可靠性是数据一致性的基础，通常需要一次或至少一次传递消息。实际上，严格来讲，没有人能够以完全一次的保证来实现消息传递系统，这是不可能实现的。实际上，我们让用户方至少一次处理幂等和重复数据删除，以模拟一次语义。实际上，即使是最少一次也不容易实现，我们将在本文中讨论原因。我们还将讨论消息传递一致性问题中最困难的部分-排序。
 
 ## 可靠性
 
@@ -18,18 +18,18 @@ published: true
 
 #### Producer Buffer
 
-大多数MQ框架在生产者端都具有in-memory buffer或TCP Socket buffer，以提高批处理或管道性能。但是缓冲区是易失的，如果连接断开或进程崩溃，缓冲区中的消息可能会丢失。 
+大多数MQ框架在生产者端都具有in-memory buffer或TCP Socket buffer，以提高批处理或管道性能。但是缓冲区是易失的，如果连接断开或进程崩溃，缓冲区中的消息可能会丢失。
 
 RabbitMQ API没有本地内存缓冲区，它仅使用套接字缓冲区。与RabbitMQ代理的TCP连接断开时，生产者的套接字缓冲区将丢失，因此您未发送的消息将会丢失。尽管RabbitMQ具有连接自动恢复功能，但它并不能帮助保持一致性，自动恢复还是会丢弃TCP缓冲区中的所有数据。另外当生产者崩溃或重新启动时，即使您拥有完美的网络，套接字缓冲区中的所有消息也都消失了。
 
-Kafka生产者API是异步的，它具有一个内存缓冲区。 Kafka还具有一个套接字缓冲区，可以通过“ socket.send.buffer.bytes”（SO_SNDBUF）对其进行调整。如果发生网络故障，套接字缓冲区中的消息可能会丢失；如果生产者崩溃，则两个缓冲区中的所有消息都将消失。
+Kafka生产者API是异步的，它具有一个内存缓冲区。 Kafka还具有一个套接字缓冲区，可以通过“socket.send.buffer.bytes”（SO_SNDBUF）对其进行调整。如果发生网络故障，套接字缓冲区中的消息可能会丢失；如果生产者崩溃，则两个缓冲区中的所有消息都将消失。
 
 由于缓冲区的易变性，仅当接收到ACK时，消息才被视为已发送。 RabbitMQ和Kafka都提供回调（ACK）。
 
-使用Kafka时，您可能需要限制缓冲区大小（“ buffer.memory”）或缩短等待时间（“ linger.ms”）。如果生成事件的速度太快，或者在一个JVM进程中有太多繁忙的生产者，则生产者可能会耗尽内存并崩溃。当然，如果您想要最佳的可靠性，则需要刷新缓冲区并针对每条消息进行确认，这肯定会降低您的应用程序的速度。
+使用Kafka时，您可能需要限制缓冲区大小（“buffer.memory”）或缩短等待时间（“linger.ms”）。如果生成事件的速度太快，或者在一个JVM进程中有太多繁忙的生产者，则生产者可能会耗尽内存并崩溃。当然，如果您想要最佳的可靠性，则需要刷新缓冲区并针对每条消息进行确认，这肯定会降低您的应用程序的速度。
 
 #### Producer-Broker ACK in RabbitMQ
-RabbitMQ使用官方文档中的“publisher confirm”术语表示ACK：
+RabbitMQ发送成功的ACK叫做Confirm，拒绝的NACK叫做Return。
 
 Once a channel is in confirm mode, both the broker and the client count messages (counting starts at 1 on the first confirm.select). The broker then confirms messages as it handles them by sending a basic.ack on the same channel. The delivery-tag field contains the sequence number of the confirmed message
 
@@ -39,25 +39,25 @@ Once a channel is in confirm mode, both the broker and the client count messages
 channel.confirmSelect(); // enable confirm
 channel.basicPublish(exchange, queue, properties, body);
 
-// option 1, blocking
-channel.waitForConfirmsOrDie(5000); 
+// option 1, blocking, wait for ACK(Confirm) and NACK(Return)
+channel.waitForConfirmsOrDie(5000);
 
 // option 2, non-blocking
 channel.addConfirmListener((sequenceNumber, multiple) -> {
-    // code when message is confirmed
+    // code when message is confirmed (ACK)
 }, (sequenceNumber, multiple) -> {
-    // code when message is nack-ed
+    // code when message is returned (NACK)
 });
 ```
 
-在代理端，仅在将消息持久保存到磁盘后才返回ACK消息。如果您有mirror queue，则意味着所有mirror queue都已经持久化此消息。如果您有quorum queue，则意味着超过一半的队列副本已经持久化了此消息。
+在Broker端，对于持久队列仅在将消息持久保存到磁盘后才返回ACK消息。如果您有mirror queue，则意味着所有mirror queue都已经持久化此消息。如果您有quorum queue，则意味着超过一半的队列副本已经持久化了此消息。对于非持久队列，只要enqueue到内存就算ACK。
+
+NACK是在一个mandatory消息无法路由后者队列满了到时候返回。 我强烈建议设置“mandatory = true”。如果没有此选项，则如果一条消息不可路由，它将被静默丢弃。启用它会导致“basic.return”返回给生产者。
 
 AMQP协议提供“transaction”以确保可靠地发布消息，但是我强烈建议您不要使用它，因为它将使吞吐量降低250倍。
 
-我强烈建议设置“ mandatory = true”。如果没有此选项，则如果一条消息不可路由，它将被静默丢弃。启用它会导致“ basic.return”（negative confirm）返回给生产者。
-
 #### Producer-Broker ACK in Kafka
-Kafka使用术语“回调”。 在这里我仅向您展示回调的API。
+Kafka使用术语“回调”表示ACK。 在这里我仅向您展示回调的API。
 ```
 Future<RecordMetadata> send(ProducerRecord<K, V> record, Callback callback);
 ```
@@ -65,7 +65,7 @@ Future<RecordMetadata> send(ProducerRecord<K, V> record, Callback callback);
 
 您还可以在Kafka客户端中使用flush()，它将耗尽所有主题的内存缓冲区和套接字缓冲区，并等待所有批处理以经纪人的ACK完成，并执行所有回调，然后返回。 flush()和callback共享相同的代码路径，但是flush()是同步的，并且会影响所有主题，回调是针对每条消息的，并且是异步的，因此请尽可能使用callback。
 
-#### 消息和数据库事务 
+#### 消息和数据库事务
 当我们需要发送消息并提交一些数据库更改时，存在一个难题，我们应该在事务中还是在事务之后发送消息？
 
 下图显示了第一个选项，它在事务内发送消息。 该消息是在事务提交之前发送的。 问题是，如果在步骤5事务回滚，则消息已发送，并且无法撤回该消息。 消费者将收到引用一些幻象数据的幻象消息。

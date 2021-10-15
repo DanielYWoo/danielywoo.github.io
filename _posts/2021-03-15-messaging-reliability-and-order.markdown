@@ -23,12 +23,12 @@ RabbitMQ API does not have a local in-memory buffer, it uses the socket buffer s
 
 Kafka producer API is async, it has a memory buffer. Kafka also has a socket buffer which can be tuned by “socket.send.buffer.bytes” (SO_SNDBUF). In case of a network failure, messages in the socket buffer could be lost; in case of a producer crash, all messages in the two buffers are gone.
 
-Due to the volatility of buffers, a message is deemed as sent only when the ACK is received. Both RabbitMQ and Kafka provide callbacks(ACK). 
+Due to the volatility of buffers, a message is deemed as sent only when the ACK is received. Both RabbitMQ and Kafka provide callbacks(ACK).
 
 When using Kafka, you probably need to limit the buffer size ("buffer.memory") or shorten the wait time ("linger.ms"). When you generate events too fast or you have too many busy producers in one JVM process, your producer could run out of memory and crash. Of course, if you want the best reliability, you need to flush the buffer and acknowledge for every single message, definitely, your application will be slowed.
 
 #### Producer-Broker ACK in RabbitMQ
-RabbitMQ uses the term "Publisher Confirm", From the official doc: 
+RabbitMQ uses the term "Publisher Confirm" for ACK, and "Publisher Return" for NACK. From the official doc, it says:
 
 Once a channel is in confirm mode, both the broker and the client count messages (counting starts at 1 on the first confirm.select). The broker then confirms messages as it handles them by sending a basic.ack on the same channel. The delivery-tag field contains the sequence number of the confirmed message
 
@@ -37,25 +37,25 @@ When programing in Java, it looks like this
 channel.confirmSelect(); // enable confirm
 channel.basicPublish(exchange, queue, properties, body);
 
-// option 1, blocking
-channel.waitForConfirmsOrDie(5000); 
+// option 1, blocking, wait for ACK(Confirm) and NACK(Return)
+channel.waitForConfirmsOrDie(5000);
 
 // option 2, non-blocking
 channel.addConfirmListener((sequenceNumber, multiple) -> {
-    // code when message is confirmed
+    // code when message is confirmed (ACK)
 }, (sequenceNumber, multiple) -> {
-    // code when message is nack-ed
+    // code when message is returned (NACK)
 });
 ```
 
-At the broker side, the ACK message is returned only after the message is persisted to disk. If you have mirror queues, that means all mirrored queues have this message persisted. If you have quorum queues, that means over half of the queue replicas have this message persisted.
+At the broker side, for a persistent queue, the ACK (confirm) message is returned only after the message is persisted to disk. If you have mirror queues, that means all mirrored queues have this message persisted. If you have quorum queues, that means over half of the queue replicas have this message persisted. For a transient queue, the ACK message is returned once it's enqueued into broker's memory.
+
+A NACK (return) message is returned when a "mandatory" message is un-routable, or the destination queue is full. And I strongly suggest setting "mandatory=true" for reliable messages. Without this option, if a message is not routable, it will be discarded silently. Enabling it will cause a "basic.return" (negative confirm) to acknowledge the producer.
 
 AMQP protocol provides transaction to ensure message published reliably but I strongly suggest not using it because it will decrease the throughput 250x.
 
-And I strongly suggest setting "mandatory=true" for reliable messages. Without this option, if a message is not routable, it will be discarded silently. Enabling it will cause a "basic.return" (negative confirm) to acknowledge the producer.
-
 #### Producer-Broker ACK in Kafka
-Kafka uses the term "callback".   Here I just show you the API for a callback.
+Kafka uses the term "callback" for ACK. Below is the API for a callback.
 ```
 Future<RecordMetadata> send(ProducerRecord<K, V> record, Callback callback);
 ```

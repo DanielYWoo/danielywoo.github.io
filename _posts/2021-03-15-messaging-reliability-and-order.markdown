@@ -75,7 +75,9 @@ The diagram below shows the 2nd option: sending a message after the transaction.
 
 ![send_out_tx](../images/2021-03-15/send_out_tx.png)
 
-To solve this problem, eBay first published a paper about the outbox pattern, and now it has been widely used nowadays. In this pattern, we have an outbox table to hold messages to be sent. The message is committed along with the database transaction, this ensures the message is persisted with business data atomically. Then an async job scans the pending messages and publishes them to the broker, if succeeds, update the message as "sent" and archive it later.
+To solve this problem, Dan Pritchett, the architect of eBay first published a paper [[1]](#References) about the outbox pattern, and it has been widely used eversince. In this pattern, we have an outbox table to hold messages to be sent. The message is committed along with the database transaction, this ensures the message is persisted with business data atomically. Then an async job scans the pending messages and publishes them to the broker, if succeeds, update the message as "sent" and archive it later.
+
+##### Outbox Messaging Pattern
 
 Below is the process of the outbox pattern.
 
@@ -90,6 +92,20 @@ Because the job has a scheduled interval, the message will be sent in batch in i
 Note, when implementing the outbox pattern, one of the difficulties is to have the service instances coordinate to run the job to find pending or failed messages and publish them. This is often done with the help of zookeeper or etcd, to elect a leader for it. So this is somehow slow with a single leader doing all the jobs. Maybe you can have multiple outbox tables and hence a leader for each outbox to avoid contention. But this will break message ordering and we will talk about this later.
 
 Another problem is when you have the low latency optimization at step 3 in the diagram above, you need to avoid step 3 and step 4 occurs at the same time for the same message. To avoid this, using some sort of external locking is too expensive, we can make the job just scan much older pending messages to avoid sending duplicated messages.
+
+Lastly, you need to pay attention to poison messages which always fail in the scanning job, you need to handle that correctly to avoid blocking other messages. e.g, Move the poison messages to another system or send email alerts to your Ops team.
+
+##### Broker 2PC Pattern
+
+Due to the three difficulties we mentioned above, RocketMQ provides a very different solution. It sends a "half-message" or "prepare-message" to the broker which will not be delivered to the consumer until you finish your transaction and manually confirm that message at step 5 in the diagram below. If the transaction is rolled back at step 4, the producer should notify the broker at step 5 then the broker will cancel the message and the consumer will never see it.
+
+![rocketmq-normal](../images/2021-03-15/rocketmq-normal.png)
+
+If the producer crashes at step 5, the broker will try to query the producer to check if the transaction should be committed or rolled back. Then the broker ensures the database and the broker are consistent.
+
+Compared to the outbox pattern, this pattern simplifies your code a lot, and it's also faster since sending messages to the broker is often faster than insert a record into the outbox table. But it has a major drawback. When the broker is down, since the prepare message cannot be acknowledged the transaction will fail even the database is still healthy. While with the outbox pattern, the transaction can be committed and processed later when the broker is recovered.
+
+Personally I would prefer outbox pattern. The three difficulties of implementing the outbox pattern can be done by frameworks and in most cases I the database transaction get committed even if the broker is temporarily down. 
 
 ### Broker Durability
 
@@ -220,3 +236,7 @@ Recap, you don't need broker delivery order which is meaningless, what you reall
 * Message reliability is not that easy as many people expected, you need to understand a lot of details including the buffers, cache, replication, leader election and failover. 
 * Exactly-once has to be implemented with idempotency or deduplication on top of at-least-once.
 * Broker delivery order is meaningless, your application should be able to handle messages in the business event order, even the broker delivers them out of order.
+
+## References
+1. Dan Pritchett, Ebay "Base: An Acid Alternative" *ACM QUEUE May/June 2008*
+

@@ -8,7 +8,7 @@ published: true
 
 ## 概述
 
-在分布式系统中，消息可靠性是数据一致性的基础，通常需要一次或至少一次传递消息。实际上，严格来讲，没有人能够以完全一次的保证来实现消息传递系统，这是不可能实现的。实际上，我们让用户方至少一次处理幂等和重复数据删除，以模拟一次语义。实际上，即使是最少一次也不容易实现，我们将在本文中讨论原因。我们还将讨论消息传递一致性问题中最困难的部分-排序。
+在分布式系统中，消息可靠性是数据一致性的基础，通常需要一次或至少一次传递消息。实际上，严格来讲，没有人能够以完全一次(exactly once)的保证来实现消息传递系统，这是不可能实现的。实际上，我们让用户方至少一次处理幂等和排除重复数据，以模拟exactly once语义。实际上，即使是at-least once也不容易实现，我们将在本文中讨论原因。我们还将讨论消息传递一致性问题中最困难的部分: 顺序(ordering)。
 
 ## 可靠性
 
@@ -24,7 +24,7 @@ RabbitMQ API没有本地内存缓冲区，它仅使用套接字缓冲区。与Ra
 
 Kafka生产者API是异步的，它具有一个内存缓冲区。 Kafka还具有一个套接字缓冲区，可以通过“socket.send.buffer.bytes”（SO_SNDBUF）对其进行调整。如果发生网络故障，套接字缓冲区中的消息可能会丢失；如果生产者崩溃，则两个缓冲区中的所有消息都将消失。
 
-由于缓冲区的易变性，仅当接收到ACK时，消息才被视为已发送。 RabbitMQ和Kafka都提供回调（ACK）。
+由于缓冲区的非持久性(volatile)，仅当接收到ACK时，消息才被视为已发送。所以RabbitMQ和Kafka都提供了ACK应答机制。
 
 使用Kafka时，您可能需要限制缓冲区大小（“buffer.memory”）或缩短等待时间（“linger.ms”）。如果生成事件的速度太快，或者在一个JVM进程中有太多繁忙的生产者，则生产者可能会耗尽内存并崩溃。当然，如果您想要最佳的可靠性，则需要刷新缓冲区并针对每条消息进行确认，这肯定会降低您的应用程序的速度。
 
@@ -52,7 +52,7 @@ channel.addConfirmListener((sequenceNumber, multiple) -> {
 
 在Broker端，对于持久队列仅在将消息持久保存到磁盘后才返回ACK消息。如果您有mirror queue，则意味着所有mirror queue都已经持久化此消息。如果您有quorum queue，则意味着超过一半的队列副本已经持久化了此消息。对于非持久队列，只要enqueue到内存就算ACK。
 
-NACK是在一个mandatory消息无法路由后者队列满了到时候返回。 我强烈建议设置“mandatory = true”。如果没有此选项，则如果一条消息不可路由，它将被静默丢弃。启用它会导致“basic.return”返回给生产者。
+NACK是在一个mandatory消息无法路由后者队列满了到时候返回。我强烈建议设置“mandatory=true”。如果没有此选项，则如果一条消息不可路由，它将被静默丢弃。启用它会导致“basic.return”返回给生产者。
 
 AMQP协议提供“transaction”以确保可靠地发布消息，但是我强烈建议您不要使用它，因为它将使吞吐量降低250倍。
 
@@ -63,7 +63,7 @@ Future<RecordMetadata> send(ProducerRecord<K, V> record, Callback callback);
 ```
 在Kafka Java客户端中，send()接受一个回调并返回一个Future，当send()返回时并不表示它已发送，这意味着它现在在缓冲区中。 然后Sender.run()循环以通过NetworkClient.poll()检查响应。 如果完成任何响应（消息已离开内存缓冲区或套接字缓冲区，已进行ACK轮询），它将在Sender线程中执行您的回调。 至此，您的消息才算是已“发送”。
 
-您还可以在Kafka客户端中使用flush()，它将耗尽所有主题的内存缓冲区和套接字缓冲区，并等待所有批处理以经纪人的ACK完成，并执行所有回调，然后返回。 flush()和callback共享相同的代码路径，但是flush()是同步的，并且会影响所有主题，回调是针对每条消息的，并且是异步的，因此请尽可能使用callback。
+您还可以在Kafka客户端中使用flush()，它等待所有topic的内存缓冲区和套接字缓冲区消费完，并等待所有批处理都得到broker的ACK，然后执行所有回调，最后同步返回。 flush()和callback共享相同的代码路径，但是flush()是同步的，并且会影响所有主题，回调是针对每条消息的，并且是异步的，因此请尽可能使用callback。
 
 #### 消息和数据库事务
 当我们需要发送消息并提交一些数据库更改时，存在一个难题，我们应该在事务中还是在事务之后发送消息？
@@ -76,7 +76,9 @@ Future<RecordMetadata> send(ProducerRecord<K, V> record, Callback callback);
 
 ![send_out_tx](../images/2021-03-15/send_out_tx.png)
 
-为了解决这个问题，eBay首先发表了一篇关于outbox模式的论文，如今已被广泛使用。 在这种模式下，我们有一个outbox表来保存要发送的消息。 该消息与数据库事务一起提交，这确保了该消息与业务数据原子地持久化。 然后，异步作业将扫描待处理的消息，并将其发布到代理，如果成功，则将消息更新为“已发送”，并在以后进行归档。
+为了解决这个问题，ebay 架构师 Dan Pritchett 在 2008 年发表的一篇论文[[1]](#参考)中描述了 outbox模式。 在这种模式下，我们有一个outbox表来保存要发送的消息。 该消息与数据库事务一起提交，这确保了该消息与业务数据原子地持久化。 然后，异步作业将扫描待处理的消息，并将其发布到代理，如果成功，则将消息更新为“已发送”，并在以后进行归档。
+
+##### Outbox 模式
 
 以下是outbox模式的过程。
 
@@ -91,6 +93,20 @@ Future<RecordMetadata> send(ProducerRecord<K, V> record, Callback callback);
 注意，在实现outbox模式时，困难之一是使多个服务实例协调运行job，避免竞争，以查找pending或failed的消息并发布它们。 这通常是在Zookeeper或etcd的帮助下以选举方式实现的。 因此，这种方式使用一个leader完成所有工作，这肯定有点慢。 也许您可以有多个outbox表，因此每个outbox都有一个leader，以避免争用。 但这将破坏消息的排序，我们将在后面讨论。
 
 另一个问题是，当您在上图中的第3步进行了低延迟优化时，您需要避免对同一条消息同时发生第3步和第4步。 为避免这种情况，使用某种外部锁定过于昂贵，我们可以使job仅扫描较旧的待处理消息，以避免发送重复的消息。
+
+最后，你要注意poison message的处理，如果一个消息在scan出来之后多次处理都失败，那么你需要把它报告给运维，并它阻碍其他正常消息的处理。
+
+##### Broker 2PC Pattern
+
+由于我们上面提到的三个难点，RocketMQ 提供了一个非常不同的解决方案。它向broker发送“half-message”或“prepare-message”，在您完成transaction并在下图中的第 5 步手动确认该消息之前，该消息不会交付给消费者。如果事务在第 4 步回滚，则生产者应在第 5 步通知broker，然后代理将取消该消息，消费者将永远不会看到它。
+
+![rocketmq-normal](../images/2021-03-15/rocketmq-normal.png)
+
+如果生产者在第 5 步崩溃，则代理将尝试查询生产者以检查是否应提交或回滚事务来确保事物一致性。所以producer需要写一个查询接口。
+
+与outbox模式相比，这种模式大大简化了您的代码，而且速度也更快，因为向代理发送消息通常比将记录插入outbox表要快。但它有一个很大的缺点。当broker崩溃时，由于half-message无法被broker确认，即使数据库仍然健康，事务也会失败。而使用outbox模式的好处是，事务仍然可以提交，事务将在稍后broker恢复后继续提交和处理。
+
+大多数情况下我还是倾向于使用Outbox模式。因为我很难接受broker crash导致我的数据库事务无法提交。
 
 ### Broker 可靠性
 
@@ -220,3 +236,6 @@ void commitAsync(OffsetCommitCallback callback);
 * 消息可靠性并不像许多人预期的那么容易，您需要了解很多细节，包括缓冲区，缓存，复制，领导者选择和故障转移。
 * Exactly-once 需要在at-least-once的基础上使用幂等或去重来实现。
 * 队列投递顺序毫无意义，您的应用程序应该能够处理业务事件订单中的消息，即使broker无序地发送消息也是如此。
+
+## 参考
+1. Dan Pritchett, Ebay "Base: An Acid Alternative" *ACM QUEUE May/June 2008*

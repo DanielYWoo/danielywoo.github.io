@@ -93,17 +93,21 @@ Note, when implementing the outbox pattern, one of the difficulties is to have t
 
 Another problem is when you have the low latency optimization at step 3 in the diagram above, you need to avoid step 3 and step 4 occurs at the same time for the same message. To avoid this, using some sort of external locking is too expensive, we can make the job just scan much older pending messages to avoid sending duplicated messages.
 
+Many developers perfer using a column in each table to indicate if the message has been sent to avoid using an outbox table which requires extra space and disk IO operations. But this optimization is only available in limited scenarios. First, the message is closely coupled with your database design so it's only for simple scenarios, it's difficult to decide which table to add the column when your transaction involves many tables. Secondly, your data must be immutable (once written, never change, e.g, a ledger table), otherwise when you send the message, the message could have been changed several times and you will not be able to rebuild the original message.
+
 Lastly, you need to pay attention to poison messages which always fail in the scanning job, you need to handle that correctly to avoid blocking other messages. e.g, Move the poison messages to another system or send email alerts to your Ops team.
 
 ##### Broker 2PC Pattern
 
-Due to the three difficulties we mentioned above, RocketMQ provides a very different solution. It sends a "half-message" or "prepare-message" to the broker which will not be delivered to the consumer until you finish your transaction and manually confirm that message at step 5 in the diagram below. If the transaction is rolled back at step 4, the producer should notify the broker at step 5 then the broker will cancel the message and the consumer will never see it.
+Due to the three difficulties we mentioned above, RocketMQ provides a very different solution. It sends a "half-message" or "prepare-message" to the broker, only after the half-message is acknowledged you continue your database transaction. Once you finish your transaction and notify the broker at step 5 in the diagram below, the half-message is delivered to the consumer. 
 
 ![rocketmq-normal](../images/2021-03-15/rocketmq-normal.png)
 
+If the transaction is rolled back at step 4, the producer should notify the broker at step 5 then the broker will cancel the message and the consumer will never see it.
+
 If the producer crashes at step 5, the broker will try to query the producer to check if the transaction should be committed or rolled back. Then the broker ensures the database and the broker are consistent.
 
-Compared to the outbox pattern, this pattern simplifies your code a lot, and it's also faster since sending messages to the broker is often faster than insert a record into the outbox table. But it has a major drawback. When the broker is down, since the prepare message cannot be acknowledged the transaction will fail even the database is still healthy. While with the outbox pattern, the transaction can be committed and processed later when the broker is recovered.
+Compared to the outbox pattern, this pattern simplifies your code, and it's also faster since sending messages to the broker is often faster than inserting a record into the outbox table. But it has a major drawback. When the broker is down, since the "prepare message" cannot be acknowledged the transaction will fail even the database is still healthy. While with the outbox pattern, the transaction can be committed and processed later when the broker is recovered.
 
 Personally I would prefer outbox pattern. The three difficulties of implementing the outbox pattern can be done by frameworks and in most cases I the database transaction get committed even if the broker is temporarily down. 
 
@@ -222,7 +226,7 @@ Now let's consider the case when m1 fails. If m1 is re-sent later at step 3, alt
 
 ![producer-order-1](../images/2021-03-15/producer-order-2.png)
 
-This is a very simple example telling you that broker delivery order is totally useless, what you really need is the business event order, which often arrives at the broker out of order. 
+This is a very simple example telling you that broker delivery order is totally useless, and it harm the throughput of your system[[1]](#References). What you really need is the business event order, probably in causal relationship, which often arrives at the broker out of order. 
 
 If you have multiple consumers they also need to handle messages in the business event order carefully. e.g, the diagram below shows that a consumer C1 receives m1, then C2 receives m2. Ideally, C2 should receive m2 after m1 is processed by C1. Without locking, m1 and m2 could be processed in parallel which violates the business event order.
 

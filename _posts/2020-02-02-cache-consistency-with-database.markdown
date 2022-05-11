@@ -16,25 +16,25 @@ Before we start, let's go through the commonly used cache patterns by how we ref
 
 #### Cache Patterns
 
-##### When Write
+##### Write & Read
 
 * Write Through: Synchronously write to the database then cache. This is safe because it writes to the database first, but it's slower than Write-Behind. It offers better performance for write-then-read scenarios than write-invalidate.
+
 * Write Behind (or write back): write to the cache first, then asynchronously write to the database. This is fast for writing, and even faster if you combine multiple writes on the same key into a single write to the database. But the database is inconsistent with the cache for a long period of time, and you could lose data in case the process crashes before the data is flushed to the database. A RAID card is a good example of this pattern, to avoid data loss you often need a battery backup unit on a RAID card to hold the data in the cache but not landed to disk yet.
+
 * Write invalidate: similar to write-through, write to the database first, but then invalidate the cache. This simplifies handling consistency between cache and database in case of concurrent updates. You don't need complex synchronization, the trade-off is hit rate is lower because you always invalidate the cache and the next read will always be a miss.
-
-##### When Read
-
-* Read Through: When a read misses, load it from the database and save it to the cache. The major problem of this pattern is that sometimes you need to warm up your cache, if you have a hot product on sale exactly at 9:00 AM on black Friday on your website, a cold cache could cause many requests pending for that product.
-
-##### When not Read or Write
 
 * Refresh ahead: predict hot data and automatically refresh cache from the database, never blocking reads, best for small read-only dataset, For example, zip code list cache, you can periodically refresh the whole cache since it's small and read-only. If you can precisely predict what keys to be read most, you can also warm up those keys in this pattern. Lastly, if the data is updated outside of your system and your system can’t be notified, you probably have to use this pattern.
 
+* Read Through: When a read misses, load it from the database and save it to the cache. The major problem of this pattern is that sometimes you need to warm up your cache (with refresh ahead pattern), if you have a hot product on sale exactly at 9:00 AM on black Friday on your website, a cold cache could cause many requests pending for that product.
+
 In most cases, we use read-through with write-through/write-behind/write-invalidate. Refresh-ahead can be used standalone, or as an optimization to predict and warm-up reads for read-through.
 
-And there are two implementation patterns by who is responsible for cache maintenance, the caller or a dedicated layer.
+##### Responsibility
 
-* Cache-through: (or look-through, or inline-cache) The cache layer is a library or service delegates write to the database and you only talk to the cache layer. The cache layer can handle consistency and failover. For example, many databases have their own cache, this is a good example of cache-through. You can also write some in-process DAO layer to read/write entities that has an embedded cache layer, from the callers' perspective this tiny layer is also a cache-through pattern. e.g., always use the @Cacheable and @CachePut annotations in Spring cache framework.
+And there are two implementation patterns by the scope of the responsibility of the application.
+
+* Cache-through: (or look-through, or inline-cache) The cache layer is a library or service delegates write to the database and your application only talks to the cache layer. The cache layer can handle the database under the hood, and ensure consistency and failover. For example, many databases have built-in cache, everything goes through the cache then disk, the client application is not aware of the consistency between cache and disk, this is a good example of cache-through. Another example is the abstract cache layer in a Spring application, from the callers' perspective this layer is also a cache-through pattern. (See @Cacheable and @CachePut annotations in Spring cache framework).
 
 * Cache-aside: (or look-aside) Your application maintains cache consistency that means your application code is more complicated, but this allows more flexibility. For example, developers can prevent some data from being cached, or set TTL dynamically by inspecting the data content, bypass cache for some queries with high consisntecy requirements, cache composite object instead of caching raw database records. Despite the benefits, the trade-off is more coding since they cannot happen automaitcally under the cache framework. And it's also difficult to keep the cache consistent like cache-through, e.g., since all queries go through the built-in cache of a database, so the cache consistency is easier to implement.
 

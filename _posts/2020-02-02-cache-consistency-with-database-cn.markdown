@@ -37,11 +37,13 @@ Cache consistency and coherency 是计算机科学中非常困难的两个话题
 
 从缓存的维护职责来看（调用者维护或专用层维护），有两种实现模式。
 
-* cache-facade: 缓存层是一个类库或服务委托写到数据库，而您仅与缓存层对话。然后数据库对您的应用程序是透明的。缓存层可以处理一致性和故障转移。例如，许多数据库都有自己的缓存，调用者不必关心缓存的更新和过期，这是Cache Facade的一个很好的例子。这种模式最大的优点是, 如果facade是资源本身提供的，那么他的一致性比较容易控制。您还可以编写一些进程内DAO层来读取/写入具有嵌入式缓存层的实体，从调用者的角度来看，这个很小的层也是一个Cache Facade, 比如Spring的cache实现，但是这时候缓存一致性就无法保证了。
+* cache-through: (or look-through) 缓存层是一个类库或服务委托写到数据库，而您仅与缓存层对话，数据库对您的应用程序是不可见的。缓存层可以处理一致性和故障转移。例如，许多数据库都有自己的缓存，调用者不必关心缓存的更新和过期，这是cache-through的一个很好的例子。这种模式最大的优点是, 如果cache是资源本身提供的，那么他的一致性比较容易控制。您还可以编写一些进程内DAO层来读取/写入具有嵌入式缓存层的实体，从调用者的角度来看，这个很小的层也是一个cache-through, 比如Spring的cache实现，但是这时候缓存一致性就无法保证了。
 
-* cache-aside: 您的应用程序需要自己来保持缓存的一致性，这意味着您的应用程序代码更加复杂，但是这提供了更大的灵活性。比如，cache aside更容易实现对象缓存，如果是cache facade模式的数据库缓存，一般来说他只能cahce rows，如果要把数据库记录作为Java POJO或者Kotlin的Data Class来缓存就很困难了。而cache aside可以把缓存和数据库完全独立出来，所以实现起来很容易. 当然，cache facade也可以缓存POJO，比如通过Spring这样的类库把POJO序列化到Redis，但是实现起来没这么简单。但是cache aside模式下通常缓存一致性比较难保持。
+* cache-aside: (or look-aside) 您的应用程序同时感知cache和数据库的存在，需要自己来维持缓存，这意味着您的应用程序代码更加复杂，但是这提供了更大的灵活性。比如，cache-aside模式下更容易细粒度的禁止某些数据缓存，或者通过检查数据来动态设定TTL，甚至对于某些一致性要求比较高的请求跳过缓存。尽管有这些优点，但是这种模式下开发人员需要写更多的代码，框架无法全自动化。另外，cache-aside模式下通常缓存一致性比较难保持，无法做到数据库内置的缓存所能达到的一致性。
 
-无论采用哪种模式，您都必须面对和解决并发一致性，而这在分布式系统中通常很困难，并且常常被遗漏。由于无论是cache facade 还是 cache aside, 我们都需要解决一致性并且实现方式相同，因此在本文中，我将只以 cache aside 模式讨论此主题.
+* 
+
+无论采用哪种模式，您都必须面对和解决并发一致性，而这在分布式系统中通常很困难，并且常常被遗漏。由于无论是cache through 还是 cache aside, 我们都需要解决一致性并且实现方式相同，因此在本文中，我将只以 cache aside 模式讨论此主题.
 
 ### 什么是一致性(Consistency)
 
@@ -49,14 +51,13 @@ Cache consistency and coherency 是计算机科学中非常困难的两个话题
 
 对于缓存一致性 一种是底层资源和缓存之间的一致性，the cache-database consistency, 还有一种是使用缓存的应用节点之间的一致性： client-view consistency.
 
-
 #### Cache-database Consistency
 
 这是缓存和资源(通常是数据库)之间的一致性。由于它们是两个独立的系统，因此更改任何数据时总会出现不一致的时间窗口。如果第一个操作成功而第二个操作失败，则会产生许多问题。对于write-through，您首先更改数据库，然后缓存和数据库会有个很小的窗口不一致。对于write-behind，您首先要更改缓存，因此数据库会有一个短暂时间和缓存不一致。(不一致的窗口大小对于write-behind模式很重要，因为不一致的时间窗口意味着在高速缓存系统发生故障时数据丢失的可能性, 而过小的窗口又无法体现cache behind的性能优势)。基本上，它们之间总是存在不一致的地方，我们所能做的就是最小化不一致的时间窗口。
 
 通常，在非分布式系统（如MySQL中的查询缓存）中的cache facade模式更易于实现，因为对磁盘的写入和缓存都是本地的。但是MySQL的查询缓存性能不佳，有两个原因。首先，很难识别受影响的查询，因为MySQL支持复杂的查询（您可以join很多表或使用它做很多复杂的事情,比如子查询）。假设您有一个包含100行的表，并且您有100条查询来查询每行。如果更新一行，则将evict所有其他99个缓存查询，此处缓存的好处很小。另一个原因是MySQL缓存需要提供MVCC和linearizability级别的一致性，这会使cache evict更加频繁。由于这两个原因，MySQL必须选择一种粗粒度的方法来到期并evict cache。这就是为什么我们经常使用Redis作为cache aside模式来牺牲一致性以获得更好的性能。像Cassandra这样的NoSQL数据库没有这样的问题，因为它没有提供如此强的一致性保证，并且支持更简单和可预测的查询。 Cassandra具有memtable作为write-behind缓存层，因此写入速度非常快, 这是特别好的一个cache facade模式的实现。同时为了避免由于write-behind造成的数据丢失，它具有WAL和in-memory副本以确保数据安全。因此，您不需要额外的Redis缓存层(cache aside)即可与Cassandra一起使用。
 
-#### Client-view Consistency 
+#### Client-view Consistency
 
 这意味着每个客户端都具有缓存数据的一致视图。在许多情况下，这对于正确的应用程序行为很重要。如果数据从版本1更新到版本2, 3，…到5，任何客户端应该看到相同的顺序（total order），不应该有任何一个客户看到1-2-5-3-4。这实际上是分布式系统中的顺序一致性模型（sequential consistency model）。 （有关更多详细信息，您可以通过Google搜索sequential consistency或阅读我的系列文章[分布式系统中的一致性模型的历史](https://danielw.cn/history-of-distributed-systems-1)。
 
@@ -76,7 +77,6 @@ Sequential Consistency模型没有任何延迟要求，如果客户端看到1-2-
 
 在这种情况下，真正的大问题是Cache Evict。如果Cache Evict基于LRU并且频繁读取数据，则缓存数据库不一致时间窗口将很大，甚至是无限的，这意味着T2将永远不会看到新值，这不满足client view之间的任何一致性模型，并会在您的应用程序中引起严重的问题。为避免这种情况，需要根据首次写入缓存时的时间戳强行设置一个固定的到期时间（例如Caffeine中的expireAfterWrite）.
 
-
 ### Concurrency in Read-through
 
 假设我们不使用分布式锁来协调T1和T2，X在缓存中一开始不存在。下图显示T1和T2都遇到缓存未命中。在第3步之后，如果在T1中发生诸如JVM full GC之类的事件，会导致其对数据库的更新延迟。同时，T2会先于T1更新缓存并将X写入最新值2，最终T1从GC恢复并将其过时的值1写入缓存。如果T2再次读取X，它将看到一个旧值，并且可能会感到困惑。这种情况下，顺序性(Sequential Consistency)和线性化(Linearizability Consistency)一致性均不能满足。
@@ -84,6 +84,7 @@ Sequential Consistency模型没有任何延迟要求，如果客户端看到1-2-
 <img src="/images/2020-02-02/concurrency_in_read_through.png" width="500px">
 
 使用分布式锁可以解决此问题，但这太昂贵了。一个简单的解决方案是防止CAS在步骤7中T1写陈旧数据。大多数现代的缓存系统都支持CAS写入（例如Redis Lua），我们可以在以下版本列上使用CAS写入, 以下为Lua脚本的实现：
+
 ```
 # Arguments
 #KEYS[1]: the key
@@ -120,11 +121,10 @@ eval "local v = redis.call('GET', KEYS[1]); if (v) then local version, value = v
 
 然后，任何后续读取都会看到缓存未命中，并使用最新值重新填充缓存。但是，这只能解决两个写客户端之间的某些数据争用方案，不能解决一个读取客户端和一个写客户端之间的数据竞争问题，它只是尽力而为的最终一致性，而不是顺序一致性。我将在下一节中解释原因。在此之前，让我们介绍一下Facebook如何通过锁定（租赁）解决此问题。
 
-
 Facebook在2013年发表了一篇论文，解释了Write-Invalidate模式与“lease”（实际上是锁）一起使用的方式。摘自 [Scaling Memcache at Facebook](https://www.usenix.org/system/files/conference/nsdi13/nsdi13-final170_update.pdf) 3.2.1.
 
->Intuitively, a memcached instance gives a lease to a client to set data back into the cache when that client experiences a cache miss. The lease is a 64-bit token bound to the specific key the client originally requested. The client provides the lease token when setting the value in the cache. With the lease token, memcached can verify and determine whether the data should be stored and
-thus arbitrate concurrent writes. Verification can fail if memcached has invalidated the lease token due to receiving a delete request for that item. Leases prevent stale sets in a manner similar to how load-link/storeconditional operates [20].
+> Intuitively, a memcached instance gives a lease to a client to set data back into the cache when that client experiences a cache miss. The lease is a 64-bit token bound to the specific key the client originally requested. The client provides the lease token when setting the value in the cache. With the lease token, memcached can verify and determine whether the data should be stored and
+> thus arbitrate concurrent writes. Verification can fail if memcached has invalidated the lease token due to receiving a delete request for that item. Leases prevent stale sets in a manner similar to how load-link/storeconditional operates [20].
 
 这篇论文没有说明在发生错误的情况下如何退还lease(lock)，如果lease持有人崩溃而未能退还release怎么办？很可能实际工程里会使用timeout的方案来释放过期租约。但是很明显，这种超时将增加延迟。我相信CAS+versioning是比他更好的解决方案。好了，现在让我们看看没有锁的情况下为什么很难通过并发客户端和具有写入无效和通读功能的服务器来实现顺序一致性
 
@@ -148,7 +148,7 @@ CAS写入解决方案不适用于写入Write-invalidate，因为一旦在步骤4
 
 总之，这个问题除了CAS没有一个非常好的解决方案。
 
-## 其它方案 
+## 其它方案
 
 ### 双删模式
 
@@ -159,7 +159,7 @@ CAS写入解决方案不适用于写入Write-invalidate，因为一旦在步骤4
 这是阿里巴巴工程师的解决方案。他们有一个侦听器，用于接收MySQL Binlog并在Redis或其他类型的缓存中填充缓存的数据。这样，您就不再需要在应用程序代码中编写缓存，监听器会自动填充缓存。而且您有从属数据库实例滞后，因此您不需要延迟缓存失效。听起来很酷，这个方法符合Sequential Consistency模型。但是该解决方案对缓存处理的粒度很粗糙，比如你有100张表，只需要缓存一张表，你仍然需要处理所有的binlog并丢弃99张表相关的日志，只处理1%的日志。另外这个方案延迟会高一点，因为你需要异步复制和解析binlog。这个方案的一个很大的优点是，在多地多活的数据复制的基础上可以实现缓存自动同步。不过要小心一定是数据库先写，后写cache，一旦binlog写入数据库有故障导致中断，cache这时候也不能写了，否则volatile cache的数据比non-volatile的数据库新会造成数据幻读。这时候你的数据一致性只能达到Eventual Consistency Level，无法达到Sequential Consistency。
 对于更复杂情况，比如每个数据中心如果既有复制也有本地应用一起写缓存的情况，不在本文讨论范围之内，这个情况非常复杂，有兴趣的同学具体可以看facebook这篇论文的“Across Regions: Consistency”部分如何使用“remote marker”来解决缓存一致性问题。 但如果没有大规模跨数据中心多数据库复制的场景，我也不太推荐这个方案。
 
-## 故障考虑 
+## 故障考虑
 
 如果对缓存的更新失败，read-through不会带来任何问题，除了增加数据库负载。如果对缓存的更新因在write-through或者write-invalidate的时候失败，则在另一个成功的写入缓存或者缓存到期之前，您将看不到最新值。当您将所有这些缓存模式组合在一起使用时，事情变得很复杂。
 

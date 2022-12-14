@@ -117,12 +117,22 @@ eval "local v = redis.call('GET', KEYS[1]); if (v) then local version, value = v
 
 然后，任何后续读取都会看到缓存未命中，并使用最新值重新填充缓存。但是，这只能解决两个写客户端之间的某些数据争用方案，不能解决一个读取客户端和一个写客户端之间的数据竞争问题，它只是尽力而为的最终一致性，而不是顺序一致性。我将在下一节中解释原因。在此之前，让我们介绍一下Facebook如何通过锁定（租赁）解决此问题。
 
-Facebook在2013年发表了一篇论文，解释了Write-Invalidate模式与“lease”（实际上是锁）一起使用的方式。摘自 [Scaling Memcache at Facebook](https://www.usenix.org/system/files/conference/nsdi13/nsdi13-final170_update.pdf) 3.2.1.
+Facebook在2013年发表了一篇论文，解释了Write-Invalidate模式与“lease”（实际上是悲观锁）一起使用的方式。摘自 [Scaling Memcache at Facebook](https://www.usenix.org/system/files/conference/nsdi13/nsdi13-final170_update.pdf) 3.2.1.
 
 > Intuitively, a memcached instance gives a lease to a client to set data back into the cache when that client experiences a cache miss. The lease is a 64-bit token bound to the specific key the client originally requested. The client provides the lease token when setting the value in the cache. With the lease token, memcached can verify and determine whether the data should be stored and
 > thus arbitrate concurrent writes. Verification can fail if memcached has invalidated the lease token due to receiving a delete request for that item. Leases prevent stale sets in a manner similar to how load-link/storeconditional operates [20].
 
-这篇论文没有说明在发生错误的情况下如何退还lease(lock)，如果lease持有人崩溃而未能退还release怎么办？很可能实际工程里会使用timeout的方案来释放过期租约。但是很明显，这种超时将增加延迟。我相信CAS+versioning是比他更好的解决方案。好了，现在让我们看看没有锁的情况下为什么很难通过并发客户端和具有写入无效和通读功能的服务器来实现顺序一致性
+假设T1和T2都去更新数据，悲观锁下只有一个client可以写数据库和缓存. 比如,
+
+```
+T1 gets the lease
+T2 fails to get the lease, wait
+T1 updates and commits database
+T1 returns the lease
+T2 kicks in
+```
+
+这篇论文没有说明在发生错误的情况下如何退还lease(lock)，但是各种异常情况下我们还是可以获得 sequential consistency。但是明显悲观锁的生命周期很长，尤其是数据库更新慢的时候。对于大并发写入吞吐会下降。我相信CAS+versioning是比他更好的解决方案，尤其是考虑到吞吐性能。好了，现在让我们看看没有锁的情况下为什么很难通过并发客户端和具有写入无效和通读功能的服务器来实现顺序一致性
 
 ### Concurrency with Write-Invalidate and Read-through
 

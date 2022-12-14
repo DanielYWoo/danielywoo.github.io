@@ -113,14 +113,26 @@ To solve the problem in write-through, we can use the write-invalidate pattern. 
 
 <img src="/images/2020-02-02/concurrency_in_write_invalidate.png" width="500px">
 
-Then any subsequent reads will see a cache miss and re-populate the cache with the latest value. However, this only solves some of the data race scenarios between two write clients, it does not solve data race problems between a reading client and a writing client without a lock, it's only best-effort eventual consistency, not sequential consistency. I will explain why in the next section. Before that, let's how Facebook solves this problem with a lock (lease).
+Then any subsequent reads will see a cache miss and re-populate the cache with the latest value. However, this only solves some of the data race scenarios between two write clients, it does not solve data race problems between a reading client and a writing client without a lock, it's only best-effort eventual consistency, not sequential consistency. I will explain why in the next section. Before that, let's how Facebook solves this problem with a pessimistic lock (lease).
 
 Facebook published a paper in 2013 to explain how the Write-Invalidate pattern is used along with "lease", which is actually a lock. From [Scaling Memcache at Facebook](https://www.usenix.org/system/files/conference/nsdi13/nsdi13-final170_update.pdf) 3.2.1.
 
 > Intuitively, a memcached instance gives a lease to a client to set data back into the cache when that client experiences a cache miss. The lease is a 64-bit token bound to the specific key the client originally requested. The client provides the lease token when setting the value in the cache. With the lease token, memcached can verify and determine whether the data should be stored and
 > thus arbitrate concurrent writes. Verification can fail if memcached has invalidated the lease token due to receiving a delete request for that item. Leases prevent stale sets in a manner similar to how load-link/storeconditional operates [20].
 
-The paper does not explain how to return the lease in case of error, what if the leaseholder crashes and fails to return the lease? Most likely using a timeout solution to destroy the lease in case of error. But obviously, this timeout will increase latency in negative cases. I believe CAS with versioning without locking is a better solution than his. Now let's see why it's difficult to achieve Sequential Consistency without a lock, when two clients read and write concurently with write-invalidate and read-through.
+Suppose T1 and T2 try to update the cache, only one client can update the database and the cache. e.g.,
+
+```
+T1 gets the lease
+T2 fails to get the lease, wait
+T1 updates and commits database
+T1 returns the lease
+T2 kicks in
+```
+
+The paper does not explain how to return the lease in case of error, but most likely it's always sequential consistency even the leaseholder fails to return a lease. But obviously, the pessimistic lock will increase latency as the lock has a long lifespan until the database transaction is commited. If there are a lot of concurrent writes with a slow database, they will wait. 
+
+CAS with versioning without pessimistic locking is a better solution than this if throughput matters. Now let's see why it's difficult to achieve Sequential Consistency without a lock, when two clients read and write concurently with write-invalidate and read-through.
 
 #### Concurrency with Write-Invalidate and Read-through
 

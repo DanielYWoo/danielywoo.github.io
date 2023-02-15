@@ -1,13 +1,13 @@
 ---
 layout: post
-title:  "Pratical Design of Health Check Probes in Kubernetes"
+title:  "Kubernetes 健康监测探针的设计和实现指南"
 date:   2023-02-13 10:00:00
 published: true
 ---
 
 ## Overview
 
-Kubernetes 依靠健康检查probe来监控每个pod的状态并管理它们的生命周期。 kubelet启动三种类型的probe，详见[官方文档](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes)。然而，由于基于真实场景的缺乏设计和实施这些probe的实用指南，导致许多开发人员使用不当。例如，某些 Spring Boot 应用程序仅使用默认的“/manage/health” Actuator API 来实现liveness和就readiness probe，这可能会导致严重的问题。本文旨在提供有关如何正确设计和实施三个探针的实用指南，以确保您的 Kubernetes 环境顺利运行。
+Kubernetes 依靠健康检查probe来监控每个pod的状态并管理它们的生命周期。 kubelet启动三种类型的probe，详见[官方文档](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes)。然而，由于基于真实场景的缺乏设计和实施这些probe的实用指南，导致许多开发人员使用不当。例如，某些 Spring Boot 应用程序仅使用默认的“/manage/health” Actuator API 来实现活性探针 (liveness probe) 和就绪探针 (readiness probe)，这可能会导致严重的问题。本文旨在提供有关如何正确设计和实施三个探针的实用指南，以确保您的 Kubernetes 环境流畅运行。
 
 >请注意，有许多不同的方法可以实现probe，例如命令行等。在本文中，我们主要关注通过 REST API 实现的probe。
 
@@ -31,7 +31,7 @@ Liveness 意味着你的容器是活跃的并且可以取得一些进展。例�
 
 微服务可能有很多依赖项，例如数据库、Redis 集群、RabbitMQ 集群或其他微服务。 Spring Boot 应用程序可以将所有这些依赖项聚合到默认的健康检查 API `manage/health` 中。如果任何组件出现故障，整个端点将报告 `DOWN` 和 `503`。例如，
 
-```
+```json
 {
     "status": "DOWN",
     "components": {

@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Pratical Design of Health Check Probes in Kubernetes"
+title:  "Practical Design of Health Check Probes in Kubernetes"
 date:   2023-02-13 10:00:00
 published: true
 ---

@@ -31,7 +31,7 @@ If a container encounters a segment fault or OOM, all the APIs, including the li
 
 A microservice could have many dependencies, such as a database, a Redis cluster, a RabbitMQ cluster, or another microservice. A Spring Boot application can aggregate all those dependencies into the default health check endpoint `manage/health`. If any component fails, the whole endpiont reports `DOWN` with `503`. e.g.,
 
-```
+```json
 {
     "status": "DOWN",
     "components": {

@@ -1,6 +1,7 @@
 ---
 layout: post
 title:  "Practical Design of Health Check Probes in Kubernetes"
+subtitle: "Real Life K8S Probes Implementation"
 date:   2023-02-13 10:00:00
 published: true
 ---

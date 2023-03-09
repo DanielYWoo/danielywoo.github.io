@@ -135,7 +135,7 @@ pst.setTimestamp(2, new Timestamp(System.currentTimeMillis())); // correct UTC e
 pst.setTimestamp(3, new Timestamp(utcEpochFromFrontEnd));       // correct UTC epoch
 pst.setTimestamp(2, new Timestamp(parse("2021-01-01T01:00+2")));// should be able to convert to correct UTC epoch with "+2"
 ```
-The examples above work for a explicit time because the Timestamp instances are correct UTC Epoch timestamps. But the code below won't work, because the function parse(...) has no idea if this string is in the current time zone or UTC, most likely it cannot convert it to the correct UTC Epoch time. Just remember, the front end application should always submit a UTC epoch timestamp in long type, or an ISO8601 date string with time zone explicitly.
+The examples above work for an explicit time because the Timestamp instances are correct UTC Epoch timestamps. But the code below won't work, because the function parse(...) has no idea if this string is in the current time zone or UTC, most likely it cannot convert it to the correct UTC Epoch time. Just remember, the front end application should always submit a UTC epoch timestamp in long type, or an ISO8601 date string with time zone explicitly.
 ```java
 pst.setTimestamp(2, new Timestamp(parse("2021-01-01T01:00"))); // this won't work for explicit time
 ```

@@ -12,21 +12,21 @@ When developing applications for users around the world, time is often implement
 
 # Floating Time and Explicit Time
 
-A "floating date/time" is a time value that isn't tied to a specific time zone. e.g, Birthday. Your birthday is Jan 1st in China, if you move to US, your birthday is still Jan 1st but the actual UTC epoch time is different. It's better to have a date string like “2020-1-1” to represent it. Another example is Christmas, '2021-12-25T00:00' happens differently in different time zones.
+A "floating date/time" is a time value that isn't tied to a specific time zone. e.g, Birthday. Your birthday is Jan 1st in China, if you move to the US, your birthday is still Jan 1st but the actual UTC epoch time is different. It's better to have a date string like “2020-1-1” to represent it. Another example is Christmas, '2021-12-25T00:00' happens differently in different time zones.
 
-An “explicit date/time” or “non-floating time” has zone or offset info, it represents an actual moment, only happens once no matter which time zone you are in. To achieve that, you either have all your explicit dates in UTC epoch, or have explicit time zone information in your date types. e.g, an ISO8601 date string like "2021-01-26T01:00:00Z+08". In Java, there are two similar classes for time zones: ZoneId and ZoneOffset. ZoneId is named like "Asia/Beijing" and it has DST. ZoneOffset is much simpler, it's just a number-like offset, e.g, '+08'. Correspondingly there are two DateTimes in Java: OffsetDateTime and ZonedDateTime. We will talk about them in detail later.
+An “explicit date/time” or “non-floating time” has zone or offset info, it represents an actual moment, and only happens once no matter which time zone you are in. To achieve that, you either have all your explicit dates in UTC epoch, or have explicit time zone information in your date types. e.g, an ISO8601 date string like "2021-01-26T01:00:00Z+08". In Java, there are two similar classes for time zones: ZoneId and ZoneOffset. ZoneId is named like "Asia/Beijing" and it has DST. ZoneOffset is much simpler, it's just a number-like offset, e.g, '+08'. Correspondingly there are two DateTimes in Java: OffsetDateTime and ZonedDateTime. We will talk about them in detail later.
 
 Obviously, if you mix them up, storing a rocket launch time in a floating date time field, you probably will launch the rocket 8 hours ahead of schedule. That's why you see astronauts always say Houston time in movies, they want explicit time. And you probably will never say your Birthday is in Berlin time since it's a floating time, if you fly to a different country in a different time zone you won't adjust your birthday several hours back.
 
-There could be conversions between floating time and explicit time. e.g, to send a congrats email on your birthday which is a floating time, your application can detect which time zone the user is in, then calculate the explicit time to send it. Another example is to send a meeting request to people in different time zones, then it must be an explicit time, but you need to convert that into each participants' local time (floating) at the front end. In this article, we mainly focus on how to handle explicit time correctly because this is much more difficult than handling floating time.
+There could be conversions between floating time and explicit time. e.g, to send a congrats email on your birthday which is a floating time, your application can detect which time zone the user is in, then calculate the explicit time to send it. Another example is to send a meeting request to people in different time zones, then it must be an explicit time, but you need to convert that into each participant's local time (floating) at the front end. In this article, we mainly focus on how to handle explicit time correctly because this is much more difficult than handling floating time.
 
 Explicit time can be processed and displayed correctly only if 
 
-1) you storage it correctly in database or cache, 
+1) you store it correctly in database or cache, 
 
-2) you have correct conversion between the storage and your application, 
+2) you have the correct conversion between the storage and your application, 
 
-3) you have correct conversion between your application and clients like a browser or an Android device.
+3) you have the correct conversion between your application and clients like a browser or an Android device.
 
 In this section, we will discuss the three items you need to pay attention to.
 
@@ -38,7 +38,7 @@ Let's demonstrate this problem with the most popular database - MySQL.
 * DATETIME: Eight bytes: A four-byte integer for date packed as YYYY×10000 + MM×100 + DD and a four-byte integer for time packed as HH×10000 + MM×100 + SS
 * TIMESTAMP: A four-byte integer representing seconds UTC since the epoch ('1970-01-01 00:00:00' UTC)
 
-In MySQL, DATETIME is a floating date type, Timestamp is supposed to be an explicit date type, it will convert time into UTC when saving, and convert back to your local time when loading. It sounds good but it's wrongly implemented, when you retrieve a row from the database there is no time zone in the returned time string. I will explain it in more details with some tests.
+In MySQL, DATETIME is a floating date type, Timestamp is supposed to be an explicit date type, it will convert time into UTC when saving, and convert back to your local time when loading. It sounds good but it's wrongly implemented, when you retrieve a row from the database there is no time zone in the returned time string. I will explain it in more detail with some tests.
 
 Now let's do some tests to play around with the two date types.
 
@@ -63,7 +63,7 @@ This can be overriden per connection/session by
 SET @@time_zone = '+10:00'
 ```
 
-Now, let's switch to time zone UTC+2, insert a row then switch to UTC+3.
+Now, let's switch to the time zone UTC+2, insert a row then switch to UTC+3.
 ```sql
 set @@time_zone ='+2:00';
 insert into test_date values(1, '2021-01-26T01:00', '2021-01-26T01:00');
@@ -90,7 +90,7 @@ If you export data from a MySQL instance and import it to another instance, no m
 
 # Conversion between Application and Database
 
-As of now, after JDK8, OffsetDateTime and ZonedDateTime are recommended date types in your Java application for explicit date types, and you can use them for stock exchange, rocket launch schedule etc; LocalDateTime is a new class for floating time, it does not have time zone information internally, you can use it for hotel morning call, birthday congrats email, etc.
+As of now, after JDK8, OffsetDateTime and ZonedDateTime are recommended date types in your Java application for explicit date types, and you can use them for the stock exchange, rocket launch schedule etc; LocalDateTime is a new class for floating time, it does not have time zone information internally, you can use it for hotel morning call, birthday congrats email, etc.
 
 Example to use ZonedDateTime
 
@@ -119,7 +119,7 @@ Output:
 ```
 You can see that the two OffsetDateTime instances have exactly the same behavior as ZonedDateTime. The only difference to ZoneDateTime is that the former uses named ZoneId (and probably with DST) and the latter uses ZoneOffset to represent time zones.
 
-Unfortunately, OffsetDateTime/ZonedDateTime are not supported by MySQL JDBC driver because they are explicit date types, while DATETIME is a floating date type, there is no time zone information in it. For an application with users around the world in different time zones, you have to save/load UTC time with DATETIME to simulate explicit time. You probably need the old good Date to interact with MySQL since it's an explicit UTC epoch actually. For floating time, use LocalDateTime.  The table below shows that you can only use the first two date types in Java with MySQL.
+Unfortunately, OffsetDateTime/ZonedDateTime are not supported by MySQL JDBC driver because they are explicit date types, while DATETIME is a floating date type, and there is no time zone information in it. For an application with users around the world in different time zones, you have to save/load UTC time with DATETIME to simulate explicit time. You probably need the old good Date to interact with MySQL since it's an explicit UTC epoch actually. For a floating time, use LocalDateTime.  The table below shows that you can only use the first two date types in Java with MySQL.
 
 | Java Date Type | Explicit or Floating   | Save | Load |
 | -------------- | ---------------------- | ---- | ---- |
@@ -135,7 +135,7 @@ pst.setTimestamp(2, new Timestamp(System.currentTimeMillis())); // correct UTC e
 pst.setTimestamp(3, new Timestamp(utcEpochFromFrontEnd));       // correct UTC epoch
 pst.setTimestamp(2, new Timestamp(parse("2021-01-01T01:00+2")));// should be able to convert to correct UTC epoch with "+2"
 ```
-The examples above work for explicit time because the Timestamp instances are correct UTC Epoch timestamps. But the code below won't work, because the function parse(...) has no idea if this string is in the current time zone or UTC, most likely it cannot convert it to the correct UTC Epoch time. Just remember, the front end application should always submit a UTC epoch timestamp in long type, or an ISO8601 date string with time zone explicitly.
+The examples above work for an explicit time because the Timestamp instances are correct UTC Epoch timestamps. But the code below won't work, because the function parse(...) has no idea if this string is in the current time zone or UTC, most likely it cannot convert it to the correct UTC Epoch time. Just remember, the front end application should always submit a UTC epoch timestamp in long type, or an ISO8601 date string with time zone explicitly.
 ```java
 pst.setTimestamp(2, new Timestamp(parse("2021-01-01T01:00"))); // this won't work for explicit time
 ```

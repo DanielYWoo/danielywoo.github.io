@@ -666,7 +666,8 @@ Now you can verify the external metric is registered to the api-server and expos
 
 ## Test HPA with external metrics
 
-We will update the HPA to target 2 as in the code snippet below. If the queue length is 2 then HPA will stabilize the number of pods.
+We will update the HPA to target 2 as in the code snippet below. If the queue length is 2 then HPA will stabilize the number of pods. 
+Because the current metric value is set to 10 in our fake monitoring system, the HPA controller will increase the number of the pods.
 ```yaml
   metrics:
     - type: External
@@ -688,7 +689,8 @@ kubectl apply -f deploy_external_metrics_hpa.yaml
 Because the queue length is fixed at 10, it simulates the scenario that even though more pods are scheduled the work is still queued,
 so HPA schedules more and more pods until it hits the limit of 10.
 
-Now we simulate the queue length is reduced.
+Now we simulate the queue length is reduced. We simulate the scenario where events are processed and only one event in queue,
+because our HPA targets for 2, so the number of pods will decrease.
 ```bash
 kubectl patch configmap fake-kafka-config --type merge -p '{"data":{"queue_length":"1"}}'
 
@@ -699,7 +701,7 @@ Now you will see the fake external monitor reports queue size as 1 for "hpa-demo
 
 # HELP kafka_queue_length Fake Kafka queue length
 # TYPE kafka_queue_length gauge
-kafka_queue_length{queue_name="hpa-demo"} 10
+kafka_queue_length{queue_name="hpa-demo"} 1
 kafka_queue_length{queue_name="foo-svc"} 1
 kafka_queue_length{queue_name="bar-svc"} 2
 ```

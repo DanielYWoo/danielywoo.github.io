@@ -22,40 +22,6 @@ The goal: after finishing, you should be able to explain (with confidence) how a
 
 Please download the source code from [here](https://github.com/DanielYWoo/hpa-demo) before you get stareted.
 
-# Table of Contents
-
-- [Overview](#overview)
-- [Concepts](#concepts)
-  - [TSDB data model](#tsdb-data-model)
-    - [Fundamental Concepts](#fundamental-concepts)
-    - [Point and Series](#point-and-series)
-  - [Prometheus Concepts](#prometheus-concepts)
-    - [Fundamental Concepts from TSDB](#fundamental-concepts-from-tsdb)
-    - [Metric Types](#metric-types)
-      - [Gauge](#gauge)
-      - [Counter](#counter)
-      - [Histogram](#histogram)
-      - [Summary](#summary)
-    - [PromQL](#promql)
-- [Understanding HPA](#understanding-hpa)
-- [Environment Setup](#environment-setup)
-  - [K8s and Ingress](#k8s-and-ingress)
-  - [Compile and build the image](#compile-and-build-the-image)
-- [HPA with Basic Resource Metrics](#hpa-with-basic-resource-metrics)
-  - [Deploy the service](#deploy-the-service)
-  - [Test HPA with basic resource metrics](#test-hpa-with-basic-resource-metrics)
-- [HPA with Custom Metrics](#hpa-with-custom-metrics)
-  - [Install Prometheus](#install-prometheus)
-  - [Collect custom metrics](#collect-custom-metrics)
-  - [Install Prometheus Adapter](#install-prometheus-adapter)
-  - [Test HPA with custom metrics](#test-hpa-with-custom-metrics)
-- [HPA with External Metrics](#hpa-with-external-metrics)
-  - [Deploy a fake monitoring system](#deploy-a-fake-monitoring-system)
-  - [Collect external metrics](#collect-external-metrics)
-  - [Expose external metrics to HPA](#expose-external-metrics-to-hpa)
-  - [Test HPA with external metrics](#test-hpa-with-external-metrics)
-- [Summary](#summary)
-
 # Concepts
 
 Take the time to internalize these concepts; shallow understanding of metrics is a common root cause of failed monitoring systems and weak SLOs.

@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "HPA with Custom/External Metrics in Kubernetes"
-subtitle: "PoC from scratch"
+subtitle: "Step by step PoC from scratch with Docker-desktop"
 date:   2025-09-30 16:00:00
 published: true
 ---

@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "在 Kubernetes 中使用 HPA + Custom / External Metrics（完整中文版）"
-subtitle: "从零搭建 metrics → decisions → scaling 的最小可验证链路"
+subtitle: "手把手本地从零搭建的PoC测试"
 date:   2025-09-30 16:00:00
 published: true
 ---
